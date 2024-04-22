@@ -115,55 +115,6 @@ class Nodes():
         session_id = state['session_id']
         transcription = state['transcription']
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
-        example = [
-            {
-                "Loan Agent (Sandy)": " Good morning/afternoon, [Customer's Name]. This is Sandy calling from ABC bank. I hope you're doing well today.?",
-                "Customer": "Good morning/afternoon. Yes, thank you, I'm doing fine. How can I assist you?"},
-
-            {
-                "Loan Agent (Sandy)": "  I'm calling today to discuss your recent loan payment. I noticed there's been a delay, which is unusual given your excellent payment history. I wanted to check in with you to ensure everything is alright on your end.",
-                "Customer": " I appreciate your concern. Unfortunately, I encountered an unexpected issue with my finances this month that caused the delay in payment."},
-
-            {
-                "Loan Agent (Sandy)": ": I understand, [Customer's Name]. Life can be unpredictable, and these things happen. Your consistent payment history hasn't gone unnoticed, and I'm here to assist you in any way I can. Would you like to discuss your situation further so we can find a suitable solution together?",
-                "Customer": " Yes, please. I would appreciate any assistance you can offer."},
-
-            {
-                "Loan Agent (Sandy)": "Certainly. Let's review your current situation and explore some options to help you get back on track. We could consider adjusting your payment schedule, setting up a payment plan, or exploring other alternatives that best fit your circumstances. Does that sound like a good starting point for us?",
-                "Customer": " Yes, that sounds reasonable."},
-            {
-                "Loan Agent (Sandy)": " Firstly, let's review your current financial situation together. This will help us understand the extent of the issue and determine the best course of action. Do you have a clear picture of your expenses and income for the upcoming months?.",
-                "Customer": "Yes, I have some rough estimates."},
-            {
-                "Loan Agent (Sandy)": "Excellent. Let's start by identifying any discretionary expenses that could be reduced or eliminated temporarily to free up funds for your loan payments. Additionally, if you have any assets or savings that could be used to cover the outstanding amount, now might be the time to consider utilizing them.",
-                "Customer": " That makes sense. I'll take a closer look at my budget and see where I can make adjustments."},
-
-            {
-                "Loan Agent (Sandy)": "Perfect. Once you've identified potential areas for savings, we can discuss restructuring your payment plan. This could involve extending the loan term, adjusting the monthly installments, or exploring alternative payment arrangements that better align with your current financial situation.",
-                "Customer": " Okay, I'll gather all the necessary information and get back to you with my proposed plan.."},
-
-            {
-                "Loan Agent (Sandy)": "That sounds like a plan. In the meantime, if you have any questions or need further assistance, don't hesitate to reach out to me. I'm here to support you every step of the way.",
-                "Customer": " Thank you so much for your help. I feel more confident about resolving this issue now."},
-
-            {
-                "Loan Agent (Sandy)": "You're very welcome, [Customer's Name]. Remember, we're a team, and together we'll find a solution that works for you. Take your time, and when you're ready, we'll discuss your proposed plan in detail.",
-                "Customer": "  I appreciate your support. I'll be in touch soon."},
-
-            {"Loan Agent (Sandy)": "Sounds good. Take care, and have a great day!",
-             "Customer": " You too. Goodbye"},
-
-        ]
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("ai", "{Loan Agent (Sandy)}"),
-                ("human", "{Customer}"),
-            ]
-        )
-        few_shot_prompt = FewShotChatMessagePromptTemplate(
-            example_prompt=prompt,
-            examples=example,
-        )
         system = """
         You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
         ,Might have some financal issue can you ask this person ,why didnt he paid this month,
@@ -176,7 +127,6 @@ class Nodes():
             [
                 ("system", system),
                 MessagesPlaceholder(variable_name="history"),
-                few_shot_prompt,
                 ("human", human),
             ]
         )
