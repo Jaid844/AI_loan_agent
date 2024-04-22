@@ -11,7 +11,7 @@ import time
 class audio_node:
 
 
-    def streamed_audio(self,input_text, model='tts-1', voice='onyx'):
+    def streamed_audio(self,input_text, model='tts-1', voice='shimmer'):
         start_time = time.time()
         # OpenAI API endpoint and parameters
         url = "https://api.openai.com/v1/audio/speech"

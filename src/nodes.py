@@ -1,6 +1,6 @@
 import os
 import time
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate,PromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_cohere import ChatCohere
 from faster_whisper import WhisperModel
@@ -42,7 +42,26 @@ class Nodes():
     def __init__(self):
         self.audio=audio_node()
 
-    def customer_voice(self,state,duration=8, fs=44100):
+    def customer_profile_summarizer(self, state):
+        name = state['name']
+        session_id = state['session_id']
+        documents = loan_embeing_model().get_relevant_documents(name)
+        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        prompt = PromptTemplate(
+            template=""" Summarize the profile of the customer below ,summarize the how he is with loan payment,financial circumstance
+               ,communication ,his credit worthiness  as detail as possilbe \n
+               Here is the context {context}
+
+               """,
+            input_variables=["context"], )
+        rag_chain = prompt | llm | StrOutputParser()
+        generation = rag_chain.invoke({"context": documents})
+        return {
+            "Profile": generation,
+            "session_id": session_id
+        }
+
+    def customer_voice_1(self,state,duration=5, fs=44100):
         print('Recording...')
         name = state['name']
         session_id=state['session_id']
@@ -67,16 +86,35 @@ class Nodes():
             "session_id":session_id
         }
 
-    def ai_voice(self,state):
-        transcription = state['transcription']
-        session_id =state['session_id']
+    def customer_voice_2(self, state, duration=5, fs=44100):
+        print('Recording...')
         name = state['name']
-        #llm = ChatGroq(model="gemma-7b-it", temperature=0.7)
-        llm = ChatOpenAI(model="gpt-3.5-turbo",  temperature=0)
-        #llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.7, top_p=0.85,convert_system_message_to_human=True)
-        #llm = ChatCohere(max_tokens=30)
-        documents = loan_embeing_model().get_relevant_documents(name)
-        documents = [d.page_content for d in documents]
+        session_id = state['session_id']
+        myrecording = sd.rec(int(duration * fs), samplerate=fs, channels=2)
+        sd.wait()
+        print('Recording complete.')
+        filename = 'myrecording.wav'
+        sf.write(filename, myrecording, fs)
+        audio_file = open(filename, "rb")
+        # model = WhisperModel('base.en', device='cpu', compute_type="int8")
+        transcription = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
+
+        # for segment in segments:
+        #    transcription=segment.text
+        return {
+
+            "transcription": transcription.text,
+            "name": name
+        }
+
+    def Good_Profile_Chain(self, state):
+        Profile = state['Profile']
+        session_id = state['session_id']
+        transcription = state['transcription']
+        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         example = [
             {
                 "Loan Agent (Sandy)": " Good morning/afternoon, [Customer's Name]. This is Sandy calling from ABC bank. I hope you're doing well today.?",
@@ -126,48 +164,14 @@ class Nodes():
             example_prompt=prompt,
             examples=example,
         )
-        system = """You are a loan agent calling a customer .
-The customer has a history of either good or bad payment habits on their loan.
-Your goal is to:
-Address the recent payment delay in a tactful manner.
-Understand the reason behind the delay (if applicable, for bad payment history).
-Offer assistance to resolve the current delay.
-Emphasize the importance of on-time payments for a healthy financial relationship.
-Maintain a professional and courteous tone throughout the call.
-Conversation Flow:
+        system = """
+        You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
+        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
+        urge him if he can some portion of the loan this month with some discount in his loan term ,due to his good history you are rewarding him
 
-Introduction:
-
-You: "Hello, this is Sandy calling from ABC BANK. May I speak to [Customer Name]?"
-Payment Delay:
-
-Good Payment History:
-You: "Hi [Customer Name], I'm calling to follow up on a recent payment for your loan. It appears there may have been a slight delay this time."
-Bad Payment History:
-You: "Hi [Customer Name], I'm calling to discuss your loan payment. We noticed a delay for this month's payment."
-Understanding the Reason (if applicable):
-
-Bad Payment History:
-You: "Is everything alright? Would you like to discuss any challenges you might be facing with making the payment?" (Avoid mentioning past delays directly.)
-Offering Assistance:
-
-You: "We're here to help! We can offer flexible options to get your account current. Would you be interested in discussing those?"
-Importance of On-Time Payments:
-
-You: "Maintaining timely payments is crucial for a positive credit history and a healthy financial relationship. We're here to support you."
-Conclusion:
-
-Based on the customer's response, offer additional solutions or next steps.
-End with a courteous closing: "Thank you for your time, [Customer Name]. Have a great day!" or "Goodbye".
-
-Remember:
-You have history of the conversation between customer and you ,so dont try to repeat the conversation
-Adapt your approach based on the customer's payment history.
-Don't repeat information or the customer's name excessively.
-Maintain a professional and helpful tone throughout the call.
-            """
+        """
         human = """Make sure you dont repeat yourself during the conversation.
-        Here is the customer profile {customer} \n\n User  query {userquery}"""
+            Here is the customer profile {profile} \n\nHere is the user response {userquery}"""
         final_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
@@ -185,21 +189,52 @@ Maintain a professional and helpful tone throughout the call.
             input_messages_key="userquery",
             history_messages_key="history",
         )
-        generation = with_message_history.invoke(
-            {"userquery":transcription , "customer": documents},
-            config={"configurable": {"session_id": session_id}}
-        )
+        generation = with_message_history.invoke({"profile": Profile, "userquery": transcription},
+                                                 config={"configurable": {"session_id": session_id}})
 
-        self.audio.streamed_audio(generation)    #Voice out TTS model from OpenAI
+        self.audio.streamed_audio(generation)
         return {
-
             "generation": generation,
-            "name": name,
-            "session_id":session_id
         }
 
+    def Bad_Profile_Chain(self, state):
+        profile = state['Profile']
+        session_id = state['session_id']
+        transcription = state['transcription']
+        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        system = """
+        You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a bad payment history of payments
+        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
+         can he pay some amount if the conversation is not good ,give him the warning the bank might take some legal action against him
+        This is a telephonic call so make a call ,talk in a that manner in small and precise manner
+        After making the call/concluding the conversation just say Goodbye 
 
+        """
+        human = """Make sure you dont repeat yourself during the conversation.
+            Here is the customer profile {profile} \n\n Here is the user response \n\n ---{userquery}"""
+        final_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                MessagesPlaceholder(variable_name="history"),
+                ("human", human),
+            ]
+        )
+        rag_chain = final_prompt | llm | StrOutputParser()
+        with_message_history = RunnableWithMessageHistory(
+            rag_chain,
+            lambda session_id: SQLChatMessageHistory(
+                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
+            ),
+            input_messages_key="userquery",
+            history_messages_key="history",
+        )
+        generation = with_message_history.invoke({"profile": profile, "userquery": transcription},
+                                                 config={"configurable": {"session_id": session_id}})
 
+        self.audio.streamed_audio(generation)
+        return {
+            "generation": generation,
+        }
 
     def grade_conversation(self,state):
         class GradeConclusion(BaseModel):
@@ -234,3 +269,35 @@ Maintain a professional and helpful tone throughout the call.
         else:
             print("--Conversation CONTINUES")
             return "customer_voice"
+
+    def grade_profile(self, state):
+        print("----CHECKING THE IF THE PROFILE IS GOOD OR BAD")
+        Profile = state['Profile']
+
+        class GradeConclusion(BaseModel):
+            """Binary score for profile to see if the profile is good profile or the bad profile
+            """
+
+            binary_score: str = Field(
+                description="Profile if they are good or bad based on credit history, 'Good' or 'Bad'")
+
+        llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+        structured_llm_grader = llm.with_structured_output(GradeConclusion)
+        system = """You are a grader assessing the profiles of customer your job is to see if the credit score of the customer are good 
+              or bad ,Grade 'Good' if the profile is Good ,or grade it Bad if the profile of the customer is 'Bad'
+                          """
+        grade_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", "Customer Profile: {profile}"),
+            ]
+        )
+        customer_profile_grader = grade_prompt | structured_llm_grader
+
+        score = customer_profile_grader.invoke({"profile": Profile})
+        if score.binary_score == "Good":
+            print("--FORKING TO GOOD  PROFILE CHAIN")
+            return "Good_Profile_Voice"
+        else:
+            print("--FORKING TO POOR  PROFILE CHAIN")
+            return "Bad_Profile_Voice"

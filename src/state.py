@@ -10,7 +10,7 @@ class GraphState(TypedDict):
         keys: A dictionary where each key is a string.
     """
     transcription:str
-    documents: List[str]
     generation: str
     name: str
     session_id:str
+    Profile:List[str]

@@ -7,18 +7,39 @@ class WorkFlow():
         nodes = Nodes()
         workflow = StateGraph(GraphState)
         ## ADDING NODES
-        workflow.add_node("customer_voice",nodes.customer_voice)
-        workflow.add_node("ai_voice", nodes.ai_voice)
+        workflow.add_node("profile_summarizer", nodes.customer_profile_summarizer)
+        workflow.add_node("Good_customer_voice_1",nodes.customer_voice_1)
+        workflow.add_node("Bad_customer_voice_2",nodes.customer_voice_1)
+        workflow.add_node("Good_Profile_Chain", nodes.Good_Profile_Chain)
+        workflow.add_node("Bad_Profile_Chain", nodes.Bad_Profile_Chain)
 
         ## STITCHING NODES
-        workflow.set_entry_point("customer_voice")
+        workflow.set_entry_point("profile_summarizer")
         workflow.add_conditional_edges(
-            "ai_voice",
-            nodes.grade_conversation,
+            "profile_summarizer",
+            nodes.grade_profile,
             {
-                "customer_voice": "customer_voice",
-                "END": END,
+                "Good_Profile_Voice": "Good_customer_voice_1",
+                "Bad_Profile_Voice": "Bad_customer_voice_2",
             },
         )
-        workflow.add_edge("customer_voice", "ai_voice")
+        workflow.add_edge("Good_customer_voice_1", "Good_Profile_Chain")
+        workflow.add_conditional_edges(
+            "Good_Profile_Chain",
+            nodes.grade_conversation,
+            {
+                "customer_voice":"Good_customer_voice_1",
+                "END":END
+            },
+        )
+        workflow.add_edge("Bad_customer_voice_2", "Bad_Profile_Chain")
+        workflow.add_conditional_edges(
+            "Bad_Profile_Chain",
+            nodes.grade_conversation,
+            {
+                "customer_voice": "Bad_customer_voice_2",
+                "END": END
+            },
+        )
+
         self.app=workflow.compile()

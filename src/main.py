@@ -6,8 +6,8 @@ app = WorkFlow().app
 # Run
 inputs = {
 
-        "name":"Mahatma Gandhi",
-       "session_id":"cutomer_mahta",
+        "name":"James",
+       "session_id":"cutomer_james",
 
 
 }
