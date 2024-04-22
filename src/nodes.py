@@ -121,7 +121,7 @@ class Nodes():
         urge him if he can some portion of the loan this month with some discount in his loan term ,due to his good history you are rewarding him
 
         """
-        human = """Make sure you dont repeat yourself during the conversation.
+        human = """Make sure you dont repeat yourself during the conversation.Have telephonic way of conversation
             Here is the customer profile {profile} \n\nHere is the user response {userquery}"""
         final_prompt = ChatPromptTemplate.from_messages(
             [
