@@ -162,25 +162,40 @@ class Nodes():
 
         Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools only when a valid  person  name is given. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation'''
 
-        human = '''{userquery}
-
+        human = '''
+        Here is the user reply {userquery}
+         Dont repeat yourself
         {agent_scratchpad}
         Here is the user profile \n{profile}
+        this is going to be a telephonic call so please first introduce your self ,and keep the conversation 
+        small and sweet
         (reminder to respond in a JSON blob no matter what)'''
 
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
+                MessagesPlaceholder(variable_name="history"),
                 ("human", human),
             ]
         )
         tools=[self.tools.loan_calcualtor()]
         agent =create_structured_chat_agent(llm, tools, prompt)
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
-        generation = agent_executor.invoke({"profile": Profile, "userquery": transcription})
-        self.audio.streamed_audio(generation)
+        agent_with_chat_history = RunnableWithMessageHistory(
+            agent_executor,
+            # This is needed because in most real world scenarios, a session id is needed
+            # It isn't really used here because we are using a simple in memory ChatMessageHistory
+            lambda session_id: SQLChatMessageHistory(
+                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
+            ),
+            input_messages_key="userquery",
+            history_messages_key="history",
+        )
+        generation = agent_with_chat_history.invoke({"profile": Profile, "userquery": transcription},
+                                                    config={"configurable": {"session_id": "james"}})
+        self.audio.streamed_audio(generation['output'])
         return {
-            "generation": generation,
+            "generation": generation['output'],
         }
 
     def Bad_Profile_Chain(self, state):
@@ -249,7 +264,7 @@ class Nodes():
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
         generation = agent_executor.invoke({"profile": profile, "userquery": transcription})
 
-        self.audio.streamed_audio(generation)
+        self.audio.streamed_audio(generation['output'])
         return {
             "generation": generation,
         }
