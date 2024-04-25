@@ -57,7 +57,7 @@ class audio_node:
                     stream.stop_stream()
                     stream.close()
             else:
-                self.logger.log(f"Error: {response.status_code} - {response.text}")
+                print(f"Error: {response.status_code} - {response.text}")
 
             audio.terminate()
 

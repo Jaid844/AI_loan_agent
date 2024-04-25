@@ -12,12 +12,17 @@ from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_cohere import ChatCohere
+from langchain.tools import BaseTool, StructuredTool, tool
+from langchain.pydantic_v1 import BaseModel, Field
+from langchain_core.tools import ToolException
+from langchain.agents import AgentExecutor,  create_structured_chat_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder,FewShotChatMessagePromptTemplate
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 from openai import OpenAI
 from audio import audio_node
+from tools import tools_agent
 from langchain.cache import InMemoryCache
 from langchain.globals import set_llm_cache
 from langchain_core.runnables.history import RunnableWithMessageHistory
@@ -41,10 +46,11 @@ def loan_embeing_model():
 class Nodes():
     def __init__(self):
         self.audio=audio_node()
+        self.tools=tools_agent()
 
     def customer_profile_summarizer(self, state):
         name = state['name']
-        session_id = state['session_id']
+
         documents = loan_embeing_model().get_relevant_documents(name)
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         prompt = PromptTemplate(
@@ -58,13 +64,12 @@ class Nodes():
         generation = rag_chain.invoke({"context": documents})
         return {
             "Profile": generation,
-            "session_id": session_id
+
         }
 
     def customer_voice_1(self,state,duration=5, fs=44100):
         print('Recording...')
         name = state['name']
-        session_id=state['session_id']
         myrecording = sd.rec(int(duration * fs), samplerate=fs, channels=2)
         sd.wait()
         print('Recording complete.')
@@ -83,13 +88,12 @@ class Nodes():
 
             "transcription": transcription.text,
             "name": name,
-            "session_id":session_id
+
         }
 
     def customer_voice_2(self, state, duration=5, fs=44100):
         print('Recording...')
         name = state['name']
-        session_id = state['session_id']
         myrecording = sd.rec(int(duration * fs), samplerate=fs, channels=2)
         sd.wait()
         print('Recording complete.')
@@ -112,37 +116,68 @@ class Nodes():
 
     def Good_Profile_Chain(self, state):
         Profile = state['Profile']
-        session_id = state['session_id']
         transcription = state['transcription']
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
-        system = """
-        You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
-        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
-        urge him if he can some portion of the loan this month with some discount in his loan term ,due to his good history you are rewarding him
+        system = '''You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
+                ,Might have some financal issue can you ask this person ,why didnt he paid this month,
+        Use the tool given to ask the user 
+        pay some portion of the amount ,always use this tool when you  need to give him new monthly payment,
+        You have access of this following tool
+        and After making the call/concluding the conversation just say Goodbye 
 
-        """
-        human = """Make sure you dont repeat yourself during the conversation because you have history of your past 
-        conversation.Have telephonic way of conversation
-            Here is the customer profile {profile} \n\nHere is the user response {userquery}"""
-        final_prompt = ChatPromptTemplate.from_messages(
+         :
+
+        {tools}
+
+        Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
+
+        Valid "action" values: "Final Answer" or {tool_names}
+
+        Provide only ONE action per $JSON_BLOB, as shown:
+
+        ```
+        {{
+          "action": $TOOL_NAME,
+          "action_input": $INPUT
+        }}
+        ```
+
+        Follow this format:
+
+        Question: input question to answer
+        Thought: consider previous and subsequent steps
+        Action:
+        ```
+        $JSON_BLOB
+        ```
+        Observation: action result
+        ... (repeat Thought/Action/Observation N times)
+        Thought: I know what to respond
+        Action:
+        ```
+        {{
+          "action": "Final Answer",
+          "action_input": "Final response to human"
+        }}
+
+        Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools only when a valid  person  name is given. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation'''
+
+        human = '''{userquery}
+
+        {agent_scratchpad}
+        Here is the user profile \n{profile}
+        (reminder to respond in a JSON blob no matter what)'''
+
+        prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
-                MessagesPlaceholder(variable_name="history"),
                 ("human", human),
             ]
         )
-        rag_chain = final_prompt | llm | StrOutputParser()
-        with_message_history = RunnableWithMessageHistory(
-            rag_chain,
-            lambda session_id: SQLChatMessageHistory(
-                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
-            ),
-            input_messages_key="userquery",
-            history_messages_key="history",
-        )
-        generation = with_message_history.invoke({"profile": Profile, "userquery": transcription},
-                                                 config={"configurable": {"session_id": session_id}})
-
+        tools=[self.tools.loan_calcualtor()]
+        agent =create_structured_chat_agent(llm, tools, prompt)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+        generation = agent_executor.invoke({"profile": Profile, "userquery": transcription})
         self.audio.streamed_audio(generation)
         return {
             "generation": generation,
@@ -150,38 +185,69 @@ class Nodes():
 
     def Bad_Profile_Chain(self, state):
         profile = state['Profile']
-        session_id = state['session_id']
         transcription = state['transcription']
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
-        system = """
-        You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a bad payment history of payments
-        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
+        system = '''You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
+                        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
+                Use the tool given to ask the user 
+                pay some portion of the amount ,always use this tool when you  need to give him new monthly payment,
+                You have access of this following tool
+                Might have some financal issue can you ask this person ,why didnt he paid this month,
          can he pay some amount if the conversation is not good ,give him the warning the bank might take some legal action against him
         This is a telephonic call so make a call ,talk in a that manner in small and precise manner
         After making the call/concluding the conversation just say Goodbye 
+                 :
 
-        """
-        human = """Make sure you dont repeat yourself during the conversation because you have history of your past 
-        conversation.Have telephonic way of conversation
-            Here is the customer profile {profile} \n\n Here is the user response \n\n ---{userquery}"""
-        final_prompt = ChatPromptTemplate.from_messages(
+                {tools}
+
+                Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
+
+                Valid "action" values: "Final Answer" or {tool_names}
+
+                Provide only ONE action per $JSON_BLOB, as shown:
+
+                ```
+                {{
+                  "action": $TOOL_NAME,
+                  "action_input": $INPUT
+                }}
+                ```
+
+                Follow this format:
+
+                Question: input question to answer
+                Thought: consider previous and subsequent steps
+                Action:
+                ```
+                $JSON_BLOB
+                ```
+                Observation: action result
+                ... (repeat Thought/Action/Observation N times)
+                Thought: I know what to respond
+                Action:
+                ```
+                {{
+                  "action": "Final Answer",
+                  "action_input": "Final response to human"
+                }}
+
+                Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools only when a valid  person  name is given. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation'''
+
+        human = '''{userquery}
+
+                {agent_scratchpad}
+                Here is the user profile \n{profile}
+                (reminder to respond in a JSON blob no matter what)'''
+        prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
-                MessagesPlaceholder(variable_name="history"),
                 ("human", human),
             ]
         )
-        rag_chain = final_prompt | llm | StrOutputParser()
-        with_message_history = RunnableWithMessageHistory(
-            rag_chain,
-            lambda session_id: SQLChatMessageHistory(
-                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
-            ),
-            input_messages_key="userquery",
-            history_messages_key="history",
-        )
-        generation = with_message_history.invoke({"profile": profile, "userquery": transcription},
-                                                 config={"configurable": {"session_id": session_id}})
+        tools = [self.tools.loan_calcualtor()]
+        agent = create_structured_chat_agent(llm, tools, prompt)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+        generation = agent_executor.invoke({"profile": profile, "userquery": transcription})
 
         self.audio.streamed_audio(generation)
         return {
@@ -194,12 +260,6 @@ class Nodes():
             typically indicates that conversation have been completed  ."""
 
             binary_score: str = Field(description="Conversation has been reached to conclusion/completed 'yes' or 'no'")
-        preamble = """As a grader assessing the conversation between the user and AI, your task is to determine if the conversation contains keyword(s) or semantic meaning indicative of concluding the interaction, such as "Bye."
-            Grade it as relevant if such indicators are present. 
-            Provide a binary score of 'yes' or 'no' to indicate whether the conversation has been completed or concluded.
-            'yes' means the conversation has been ended or concluded 
-            'no '  means the conversation is still going on
-            """
         generation = state['generation']
         llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
         structured_llm_grader = llm.with_structured_output(GradeConclusion)

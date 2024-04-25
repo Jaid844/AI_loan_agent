@@ -1,0 +1,21 @@
+,Name,Age,Occupation,Income,Credit_Score,Credit_History,Loan_Type,Loan_Amount,Loan_Term,Monthly_Payment,Interest_Rate,Total_Interest_Paid,Total_Repayment_Amount
+0,Albert Einstein,62,Physicist,50000,300,High-risk borrower with low creditworthiness,Personal Loan,20000,5,400.0,12,12000,32000
+1,Marie Curie,35,Unemployed,25000,300,Poor,Personal Loan,15000,5,333.33,12,4500,19500
+2,Martin Luther King Jr.,42,Unstable Income,35000,550,"Low creditworthiness due to a poor credit score, delinquent behavior, and a history of default. High risk of default and unfavorable payment behavior.",Personal Loan,15000,5,333.33,12,4500,27000
+3,Mahatma Gandhi,78,Farmer,25000,300,Poor,Personal Loan,10000,5,250.0,12,1500,13000
+4,Isaac Newton,35,Unemployed,30000,500,Low,Personal Loan,20000,5,400.0,12,6000,28000
+5,Leonardo da Vinci,35,Artist,40000,500,Low,Personal Loan,20000,5,333.33,12,6000,28000
+6,Nelson Mandela,62,Unemployed,25000,500,High-risk borrower with low creditworthiness,Personal Loan,15000,5,333.33,12,4500,19500
+7,Stephen Hawking,65,Physicist,50000,300,"Low creditworthiness, history of missed payments and defaulting on loans",Personal Loan,20000,5,400.0,12,6000,28000
+8,Anne Frank,16,Student,15000,500,"Low creditworthiness, high risk of default",Personal Loan,10000,5,250.0,12,3000,13000
+9,Rosa Parks,55,Domestic Worker,25000,500,Poor,Personal Loan,15000,5,333.33,12,6000,21000
+10,Olivia,32,Software Engineer,80000,750,Good payment history with no late or missed payments,Personal Loan,20000,5,333.33,6,1500,25000
+11,Emma,30,Software Engineer,80000,850,"Strong payment history, stable income, and responsible financial management",Personal Loan,20000,5,333.33,6,1500,25000
+12,Liam,30,Software Engineer,60000,750,Good,Personal Loan,20000,5,333.33,6,1500,25000
+13,Noah,30,Software Engineer,80000,850,"High creditworthiness, consistent payment history, stable financial circumstances, and responsible borrowing behavior",Personal Loan,50000,5,833.33,6,15000,65000
+14,Ava,32,Software Engineer,75000,750,Good,Personal Loan,20000,5,333.33,6,1500,25000
+15,Elijah,32,Software Engineer,80000,850,Excellent,Personal Loan,20000,5,333.33,6,1500,25000
+16,Charlotte,35,Full-time Employment,75000,850,Good,Mortgage,200000,15,1200.0,4,24000,280000
+17,Amelia,30,Software Engineer,80000,850,Good,Personal Loan,50000,5,833.33,6,15000,65000
+18,William,35,Software Engineer,80000,850,Excellent,Personal Loan,20000,5,333.33,6,1500,25000
+19,James,35,Software Engineer,80000,750,Good,Personal Loan,20000,5,333.33,6,1500,25000
