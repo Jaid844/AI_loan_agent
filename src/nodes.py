@@ -15,7 +15,7 @@ from langchain_cohere import ChatCohere
 from langchain.tools import BaseTool, StructuredTool, tool
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import ToolException
-from langchain.agents import AgentExecutor,  create_structured_chat_agent
+from langchain.agents import AgentExecutor, create_structured_chat_agent, create_react_agent, create_json_chat_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder,FewShotChatMessagePromptTemplate
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
@@ -31,7 +31,7 @@ load_dotenv()
 client = OpenAI()
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = "Loan Agent"
+os.environ["LANGCHAIN_PROJECT"] = "Loan Agent NEW"
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
@@ -117,69 +117,71 @@ class Nodes():
     def Good_Profile_Chain(self, state):
         Profile = state['Profile']
         transcription = state['transcription']
-        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
-        system = '''You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
-                ,Might have some financal issue can you ask this person ,why didnt he paid this month,
-        Use the tool given to ask the user 
-        pay some portion of the amount ,always use this tool when you  need to give him new monthly payment,
-        You have access of this following tool
-        and After making the call/concluding the conversation just say Goodbye 
+        llm = ChatOpenAI(model="gpt-4-1106-preview", temperature=0)
+        system = ''' You are loan agent named sandy that represent ABC bank ,which call customer about their status of loan 
+                    ,Might have some financal issue can you ask this person ,why didnt he paid this month,Use the given tool 
+                    to give him some adjustment
 
-         :
+
+        '''
+        human = '''TOOLS
+        ------
+        Assistant can ask the user to use tools to look up information that may be helpful in 
+        answering the users original question. The tools the human can use are:
 
         {tools}
 
-        Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
+        RESPONSE FORMAT INSTRUCTIONS
+        ----------------------------
 
-        Valid "action" values: "Final Answer" or {tool_names}
+        When responding to me, please output a response in one of two formats:
 
-        Provide only ONE action per $JSON_BLOB, as shown:
+        **Option 1:**
+        Use this if you want the human to use a tool.
+        Markdown code snippet formatted in the following schema:
 
-        ```
+        ```json
         {{
-          "action": $TOOL_NAME,
-          "action_input": $INPUT
+            "action": string, \ The action to take. Must be one of {tool_names}
+            "action_input": string \ The input to the action
         }}
         ```
 
-        Follow this format:
+        **Option #2:**
+        Use this if you want to respond directly to the human. Markdown code snippet formatted             in the following schema:
 
-        Question: input question to answer
-        Thought: consider previous and subsequent steps
-        Action:
-        ```
-        $JSON_BLOB
-        ```
-        Observation: action result
-        ... (repeat Thought/Action/Observation N times)
-        Thought: I know what to respond
-        Action:
-        ```
+        ```json
         {{
-          "action": "Final Answer",
-          "action_input": "Final response to human"
+            "action": "Final Answer",
+            "action_input": string \ You should put what you want to return to use here
         }}
+        ```
 
-        Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools only when a valid  person  name is given. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation'''
-
-        human = '''
-        Here is the user reply {userquery}
-         Dont repeat yourself
-        {agent_scratchpad}
-        Here is the user profile \n{profile}
-        this is going to be a telephonic call so please first introduce your self ,and keep the conversation 
-        small and sweet
-        (reminder to respond in a JSON blob no matter what)'''
+        USER'S INPUT
+        --------------------
+        Here is the user's input (remember to respond with a markdown code snippet of a json  
+        blob with a single action, and NOTHING else):
+        and here is user profile {profile}
+        POINTS TO REMEMBER 
+        Step 1 :First greet customer ,Introduce yourself  make sure you make the conversation small and sweet 
+        Step 2 :Tell him the agenda why did you call today
+        Step 3:Make sure you conversation is small and telephonic 
+        STEP 4:After getting some information about the situation 
+        give him some adjustment in loan amount
+        
+        Remember this conversation is going to be telephonic so make the talk small and effective
+        {userquery}'''
 
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
                 MessagesPlaceholder(variable_name="history"),
                 ("human", human),
+                MessagesPlaceholder("agent_scratchpad"),
             ]
         )
         tools=[self.tools.loan_calcualtor()]
-        agent =create_structured_chat_agent(llm, tools, prompt)
+        agent = create_json_chat_agent(llm, tools, prompt)
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
         agent_with_chat_history = RunnableWithMessageHistory(
             agent_executor,
@@ -192,7 +194,7 @@ class Nodes():
             history_messages_key="history",
         )
         generation = agent_with_chat_history.invoke({"profile": Profile, "userquery": transcription},
-                                                    config={"configurable": {"session_id": "james"}})
+                                                    config={"configurable": {"session_id": "james_003"}})
         self.audio.streamed_audio(generation['output'])
         return {
             "generation": generation['output'],

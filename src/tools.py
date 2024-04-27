@@ -4,7 +4,7 @@ from langchain.tools import BaseTool, StructuredTool, tool
 from langchain.pydantic_v1 import BaseModel, Field
 
 class CalculatorInput(BaseModel):
-    name: str = Field(description="Name of the Person that needs to be searched ")
+    name: str = Field(description="Full Name of the Person that needs to be searched ")
 
 class tools_agent():
         def monthly_payment(self,name: str) -> int:
