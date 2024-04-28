@@ -12,10 +12,10 @@ from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_cohere import ChatCohere
-from langchain.tools import BaseTool, StructuredTool, tool
+
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain_core.tools import ToolException
-from langchain.agents import AgentExecutor, create_structured_chat_agent, create_react_agent, create_json_chat_agent
+from langchain.agents import AgentExecutor, create_structured_chat_agent, create_tool_calling_agent, create_json_chat_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder,FewShotChatMessagePromptTemplate
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
@@ -31,7 +31,7 @@ load_dotenv()
 client = OpenAI()
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = "Loan Agent NEW"
+os.environ["LANGCHAIN_PROJECT"] = "Loan Agent adjustment"
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 
@@ -116,157 +116,126 @@ class Nodes():
 
     def Good_Profile_Chain(self, state):
         Profile = state['Profile']
+        session_id = state['session_id']
         transcription = state['transcription']
-        llm = ChatOpenAI(model="gpt-4-1106-preview", temperature=0)
-        system = ''' You are loan agent named sandy that represent ABC bank ,which call customer about their status of loan 
-                    ,Might have some financal issue can you ask this person ,why didnt he paid this month,Use the given tool 
-                    to give him some adjustment
+        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        example = [
+            {
+                "Loan Agent (Sandy)": " Good morning/afternoon, [Customer's Name]. This is Sandy calling from ABC bank. I hope you're doing well today.?",
+                "Customer": "Good morning/afternoon. Yes, thank you, I'm doing fine. How can I assist you?"},
 
+            {
+                "Loan Agent (Sandy)": "  I'm calling today to discuss your recent loan payment. I noticed there's been a delay, which is unusual given your excellent payment history. I wanted to check in with you to ensure everything is alright on your end.",
+                "Customer": " I appreciate your concern. Unfortunately, I encountered an unexpected issue with my finances this month that caused the delay in payment."},
 
-        '''
-        human = '''TOOLS
-        ------
-        Assistant can ask the user to use tools to look up information that may be helpful in 
-        answering the users original question. The tools the human can use are:
+            {
+                "Loan Agent (Sandy)": ": I understand, [Customer's Name]. Life can be unpredictable, and these things happen. Your consistent payment history hasn't gone unnoticed, and I'm here to assist you in any way I can. Would you like to discuss your situation further so we can find a suitable solution together?",
+                "Customer": " Yes, please. I would appreciate any assistance you can offer."},
 
-        {tools}
+            {
+                "Loan Agent (Sandy)": "Certainly. Let's review your current situation and explore some options to help you get back on track. We could consider adjusting your payment schedule, setting up a payment plan, or exploring other alternatives that best fit your circumstances. Does that sound like a good starting point for us?",
+                "Customer": " Yes, that sounds reasonable."},
+            {
+                "Loan Agent (Sandy)": " Firstly, let's review your current financial situation together. This will help us understand the extent of the issue and determine the best course of action. Do you have a clear picture of your expenses and income for the upcoming months?.",
+                "Customer": "Yes, I have some rough estimates."},
+            {
+                "Loan Agent (Sandy)": "Excellent. Let's start by identifying any discretionary expenses that could be reduced or eliminated temporarily to free up funds for your loan payments. Additionally, if you have any assets or savings that could be used to cover the outstanding amount, now might be the time to consider utilizing them.",
+                "Customer": " That makes sense. I'll take a closer look at my budget and see where I can make adjustments."},
 
-        RESPONSE FORMAT INSTRUCTIONS
-        ----------------------------
+            {
+                "Loan Agent (Sandy)": "Perfect. Once you've identified potential areas for savings, we can discuss restructuring your payment plan. This could involve extending the loan term, adjusting the monthly installments, or exploring alternative payment arrangements that better align with your current financial situation.",
+                "Customer": " Okay, I'll gather all the necessary information and get back to you with my proposed plan.."},
 
-        When responding to me, please output a response in one of two formats:
+            {
+                "Loan Agent (Sandy)": "That sounds like a plan. In the meantime, if you have any questions or need further assistance, don't hesitate to reach out to me. I'm here to support you every step of the way.",
+                "Customer": " Thank you so much for your help. I feel more confident about resolving this issue now."},
 
-        **Option 1:**
-        Use this if you want the human to use a tool.
-        Markdown code snippet formatted in the following schema:
+            {
+                "Loan Agent (Sandy)": "You're very welcome, [Customer's Name]. Remember, we're a team, and together we'll find a solution that works for you. Take your time, and when you're ready, we'll discuss your proposed plan in detail.",
+                "Customer": "  I appreciate your support. I'll be in touch soon."},
 
-        ```json
-        {{
-            "action": string, \ The action to take. Must be one of {tool_names}
-            "action_input": string \ The input to the action
-        }}
-        ```
+            {"Loan Agent (Sandy)": "Sounds good. Take care, and have a great day!",
+             "Customer": " You too. Goodbye"},
 
-        **Option #2:**
-        Use this if you want to respond directly to the human. Markdown code snippet formatted             in the following schema:
-
-        ```json
-        {{
-            "action": "Final Answer",
-            "action_input": string \ You should put what you want to return to use here
-        }}
-        ```
-
-        USER'S INPUT
-        --------------------
-        Here is the user's input (remember to respond with a markdown code snippet of a json  
-        blob with a single action, and NOTHING else):
-        and here is user profile {profile}
-        POINTS TO REMEMBER 
-        Step 1 :First greet customer ,Introduce yourself  make sure you make the conversation small and sweet 
-        Step 2 :Tell him the agenda why did you call today
-        Step 3:Make sure you conversation is small and telephonic 
-        STEP 4:After getting some information about the situation 
-        give him some adjustment in loan amount
-        
-        Remember this conversation is going to be telephonic so make the talk small and effective
-        {userquery}'''
-
+        ]
         prompt = ChatPromptTemplate.from_messages(
+            [
+                ("ai", "{Loan Agent (Sandy)}"),
+                ("human", "{Customer}"),
+            ]
+        )
+        few_shot_prompt = FewShotChatMessagePromptTemplate(
+            example_prompt=prompt,
+            examples=example,
+        )
+        system = """
+               You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
+               ,Might have some financal issue can you ask this person ,why didnt he paid this month,
+               urge him if he can pay some portion of the loan this month ,tell the customer you(Sandy) are ready to adjust the loan amount 
+               for him due to his good credit history
+               First ask him if he ready for adjustment in his loan term ,then use adjust the loan amount 
+
+               """
+        human = """Make sure you dont repeat yourself during the conversation.
+                    Make the conversation in telephonic ,make it small and sweet
+                   Here is the customer profile {profile} \n\nHere is the user response {userquery}"""
+
+        final_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
                 MessagesPlaceholder(variable_name="history"),
                 ("human", human),
-                MessagesPlaceholder("agent_scratchpad"),
             ]
         )
-        tools=[self.tools.loan_calcualtor()]
-        agent = create_json_chat_agent(llm, tools, prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
-        agent_with_chat_history = RunnableWithMessageHistory(
-            agent_executor,
-            # This is needed because in most real world scenarios, a session id is needed
-            # It isn't really used here because we are using a simple in memory ChatMessageHistory
+        rag_chain = final_prompt | llm | StrOutputParser()
+        with_message_history = RunnableWithMessageHistory(
+            rag_chain,
             lambda session_id: SQLChatMessageHistory(
                 session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
             ),
             input_messages_key="userquery",
             history_messages_key="history",
         )
-        generation = agent_with_chat_history.invoke({"profile": Profile, "userquery": transcription},
-                                                    config={"configurable": {"session_id": "james_003"}})
-        self.audio.streamed_audio(generation['output'])
+
+        generation = with_message_history.invoke({"profile": Profile, "userquery": transcription},
+                                                    config={"configurable": {"session_id": session_id}})
+        self.audio.streamed_audio(generation)
         return {
-            "generation": generation['output'],
+            "generation": generation,
         }
 
     def Bad_Profile_Chain(self, state):
         profile = state['Profile']
+        session_id=state['session_id']
         transcription = state['transcription']
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
-        system = '''You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
-                        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
-                Use the tool given to ask the user 
-                pay some portion of the amount ,always use this tool when you  need to give him new monthly payment,
-                You have access of this following tool
-                Might have some financal issue can you ask this person ,why didnt he paid this month,
+        system = """You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a bad payment history of payments
+        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
          can he pay some amount if the conversation is not good ,give him the warning the bank might take some legal action against him
         This is a telephonic call so make a call ,talk in a that manner in small and precise manner
-        After making the call/concluding the conversation just say Goodbye 
-                 :
-
-                {tools}
-
-                Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
-
-                Valid "action" values: "Final Answer" or {tool_names}
-
-                Provide only ONE action per $JSON_BLOB, as shown:
-
-                ```
-                {{
-                  "action": $TOOL_NAME,
-                  "action_input": $INPUT
-                }}
-                ```
-
-                Follow this format:
-
-                Question: input question to answer
-                Thought: consider previous and subsequent steps
-                Action:
-                ```
-                $JSON_BLOB
-                ```
-                Observation: action result
-                ... (repeat Thought/Action/Observation N times)
-                Thought: I know what to respond
-                Action:
-                ```
-                {{
-                  "action": "Final Answer",
-                  "action_input": "Final response to human"
-                }}
-
-                Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools only when a valid  person  name is given. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation'''
-
-        human = '''{userquery}
-
-                {agent_scratchpad}
-                Here is the user profile \n{profile}
-                (reminder to respond in a JSON blob no matter what)'''
-        prompt = ChatPromptTemplate.from_messages(
+        After making the call/concluding the conversation just say Goodbye """
+        human = """Make sure you dont repeat yourself during the conversation.
+                    Here is the customer profile {profile} \n\n Here is the user response \n\n ---{userquery}"""
+        final_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
+                MessagesPlaceholder(variable_name="history"),
                 ("human", human),
             ]
         )
-        tools = [self.tools.loan_calcualtor()]
-        agent = create_structured_chat_agent(llm, tools, prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
-        generation = agent_executor.invoke({"profile": profile, "userquery": transcription})
+        rag_chain = final_prompt | llm | StrOutputParser()
+        with_message_history = RunnableWithMessageHistory(
+            rag_chain,
+            lambda session_id: SQLChatMessageHistory(
+                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
+            ),
+            input_messages_key="userquery",
+            history_messages_key="history",
+        )
+        generation = with_message_history.invoke({"profile": profile, "userquery": transcription},
+                                                 config={"configurable": {"session_id":session_id }})
 
-        self.audio.streamed_audio(generation['output'])
+        self.audio.streamed_audio(generation)
         return {
             "generation": generation,
         }
@@ -330,3 +299,100 @@ class Nodes():
         else:
             print("--FORKING TO POOR  PROFILE CHAIN")
             return "Bad_Profile_Voice"
+
+    def grade_loan_adjustment(self,state):
+      print("CHECKING IF THE LOAN ADJUSTMENT HAS BEEN DONE")
+      ai_voice=state['generation']
+      class Grade_loan_modification(BaseModel):
+          """Binary score for conversation to see if loan adjustment has been done or not
+          """
+
+          binary_score: str = Field(description="Conversation has been reached to Loan modification terms 'yes' or 'no'")
+
+      system = """ As a grader assessing the conversation between the user and AI,your task is to determine if the conversation contains
+      keyword or semantic cues that signals any loan modification verdict such 'We will be adjusting your loan terms' .Grade it as relevant if such indicators are present.
+      Provide a binary score of 'yes' or 'no' to indicate whether the conversation has loan modification term in it 
+      'yes' means the conversation has reached to loan modification , and 'no' means it has no
+      """
+      llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
+      structured_llm_grader = llm.with_structured_output(Grade_loan_modification)
+      grade_prompt = ChatPromptTemplate.from_messages(
+          [
+              ("system", system),
+              ("human", "User question: {conversation}"),
+          ]
+      )
+      retrieval_grader_1 = grade_prompt | structured_llm_grader
+      score=retrieval_grader_1.invoke({"conversation":ai_voice})
+      grade = score.binary_score
+      if grade == "yes":
+          print("--CONVERSATION ROUTED TO LOAN ADJUSTMENT")
+          return "Loan_Adjustment_Agent"
+      else:
+          print("--LOAN ADJUSTMENT HAS NOT BEEN DONE")
+          return "customer_voice"
+
+
+    def loan_adjustment_agent(self,state):
+        generation=state['generation']
+        system = """
+        You are loan agent that helps people calculate their monthly payment with the available tool you calculate them their annual loan 
+        Your final answer should include what their loan amount they will pay this month
+
+        """
+        human = '''TOOLS
+        ------
+        Assistant can ask the user to use tools to look up information that may be helpful in             answering the users original question. The tools the human can use are:
+
+        {tools}
+
+        RESPONSE FORMAT INSTRUCTIONS
+        ----------------------------
+
+        When responding to me, please output a response in one of two formats:
+
+        **Option 1:**
+        Use this if you want the human to use a tool./
+
+        Markdown code snippet formatted in the following schema:
+
+        ```json
+        {{
+            "action": string, \ The action to take. Must be one of {tool_names}
+            "action_input": string \ The input to the action
+        }}
+        ```
+
+        **Option #2:**
+        Use this if you want to respond directly to the human. Markdown code snippet formatted             in the following schema:
+
+        ```json
+        {{
+            "action": "Final Answer",
+            "action_input": string \ You should put what you want to return to use here
+        }}
+        ```
+
+        USER'S INPUT
+        --------------------
+        Here is the user's input (remember to respond with a markdown code snippet of a json             blob with a single action, and NOTHING else):
+
+        {input}'''
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                MessagesPlaceholder("chat_history", optional=True),
+                ("human", human),
+                MessagesPlaceholder("agent_scratchpad"),
+            ]
+        )
+        llm=ChatOpenAI(model='gpt-3.5-turbo')
+        tools = [self.tools.monthly_payment()]
+        agent = create_json_chat_agent(llm, tools, prompt)
+        agent_executor = AgentExecutor(
+            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
+        )
+        generation=agent_executor.invoke({"input":generation})
+        return {
+            "generation": generation
+        }

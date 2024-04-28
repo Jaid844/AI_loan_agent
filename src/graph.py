@@ -12,7 +12,7 @@ class WorkFlow():
         workflow.add_node("Bad_customer_voice_2",nodes.customer_voice_1)
         workflow.add_node("Good_Profile_Chain", nodes.Good_Profile_Chain)
         workflow.add_node("Bad_Profile_Chain", nodes.Bad_Profile_Chain)
-
+        workflow.add_node("Loan_Adjustment_Agent",nodes.loan_adjustment_agent)
         ## STITCHING NODES
         workflow.set_entry_point("profile_summarizer")
         workflow.add_conditional_edges(
@@ -26,10 +26,20 @@ class WorkFlow():
         workflow.add_edge("Good_customer_voice_1", "Good_Profile_Chain")
         workflow.add_conditional_edges(
             "Good_Profile_Chain",
+            nodes.grade_loan_adjustment,
+            {
+                "Loan_Adjustment_Agent":"Loan_Adjustment_Agent",
+                "customer_voice":"Good_customer_voice_1"
+            },
+        )
+        workflow.add_edge("Loan_Adjustment_Agent","Good_Profile_Chain")
+        workflow.add_edge("Good_Profile_Chain", "Good_customer_voice_1")
+        workflow.add_conditional_edges(
+            "Good_Profile_Chain",
             nodes.grade_conversation,
             {
-                "customer_voice":"Good_customer_voice_1",
-                "END":END
+                "customer_voice": "Good_customer_voice_1",
+                "END": END
             },
         )
         workflow.add_edge("Bad_customer_voice_2", "Bad_Profile_Chain")

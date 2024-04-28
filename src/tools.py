@@ -7,7 +7,13 @@ class CalculatorInput(BaseModel):
     name: str = Field(description="Full Name of the Person that needs to be searched ")
 
 class tools_agent():
+        @tool
         def monthly_payment(self,name: str) -> int:
+            """
+            This tool will help to give new monthly payment for user
+            :param name: Full name of the customer
+            :return:
+            """
             try:
                 df =pd.read_csv("Loan_amount.csv")
                 df.set_index('Name', inplace=True)
@@ -19,13 +25,3 @@ class tools_agent():
             except Exception as e:
                 raise ToolException("The search tool1 is not available." ,e)
 
-
-        def loan_calcualtor(self):
-            monthly_calculator = StructuredTool.from_function(
-                func=self.monthly_payment,
-                name="Montly_Payment_Calculator",
-                description="useful for when need to calculate the new amount for the loan term to be paid when name is given",
-                args_schema=CalculatorInput,
-                handle_tool_error=True
-            )
-            return monthly_calculator

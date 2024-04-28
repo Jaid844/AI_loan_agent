@@ -13,3 +13,4 @@ class GraphState(TypedDict):
     generation: str
     name: str
     Profile:List[str]
+    session_id:str
