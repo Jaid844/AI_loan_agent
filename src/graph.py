@@ -33,7 +33,6 @@ class WorkFlow():
             },
         )
         workflow.add_edge("Loan_Adjustment_Agent","Good_Profile_Chain")
-        workflow.add_edge("Good_Profile_Chain", "Good_customer_voice_1")
         workflow.add_conditional_edges(
             "Good_Profile_Chain",
             nodes.grade_conversation,
@@ -42,6 +41,7 @@ class WorkFlow():
                 "END": END
             },
         )
+        workflow.add_edge("Good_Profile_Chain", "Good_customer_voice_1")
         workflow.add_edge("Bad_customer_voice_2", "Bad_Profile_Chain")
         workflow.add_conditional_edges(
             "Bad_Profile_Chain",

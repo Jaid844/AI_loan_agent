@@ -7,7 +7,7 @@ app = WorkFlow().app
 inputs = {
 
         "name":"James",
-        "session_id":"james 12"
+        "session_id":"james44444r"
 
 }
 for output in app.stream(inputs):

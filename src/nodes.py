@@ -1,6 +1,8 @@
 import os
 import time
-from langchain_core.prompts import ChatPromptTemplate,PromptTemplate
+
+import pandas as pd
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_cohere import ChatCohere
 from faster_whisper import WhisperModel
@@ -14,9 +16,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_cohere import ChatCohere
 
 from langchain.pydantic_v1 import BaseModel, Field
-from langchain_core.tools import ToolException
-from langchain.agents import AgentExecutor, create_structured_chat_agent, create_tool_calling_agent, create_json_chat_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder,FewShotChatMessagePromptTemplate
+from langchain_core.tools import ToolException, tool
+from langchain.agents import AgentExecutor, create_structured_chat_agent, create_tool_calling_agent, \
+    create_json_chat_agent
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, FewShotChatMessagePromptTemplate
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
@@ -26,27 +29,49 @@ from tools import tools_agent
 from langchain.cache import InMemoryCache
 from langchain.globals import set_llm_cache
 from langchain_core.runnables.history import RunnableWithMessageHistory
+
 load_dotenv()
-#set_llm_cache(InMemoryCache())
+# set_llm_cache(InMemoryCache())
 client = OpenAI()
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "Loan Agent adjustment"
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 embeddings = VoyageAIEmbeddings(
-     model="voyage-2",batch_size=128,truncation=True
+    model="voyage-2", batch_size=128, truncation=True
 )
+
+
 def loan_embeing_model():
-    new_db = FAISS.load_local("faiss_index_loan_voyage1", embeddings,allow_dangerous_deserialization=True)
-    new_db=new_db.as_retriever(search_kwargs={"k": 1})
+    new_db = FAISS.load_local("faiss_index_loan_voyage1", embeddings, allow_dangerous_deserialization=True)
+    new_db = new_db.as_retriever(search_kwargs={"k": 1})
     return new_db
+
+
+@tool
+def monthly_payment(name: str) -> int:
+    """
+        This tool will help to give new monthly payment for user
+        :param name: Full name of the customer
+        :return:
+        """
+    try:
+        df = pd.read_csv("Loan_amount.csv")
+        df.set_index('Name', inplace=True)
+        interest_rate = 0.05  #
+        monthly_payment = df.loc[name]['Monthly_Payment']
+        new_monthly_payment = monthly_payment * (1 + interest_rate) - monthly_payment
+        df.reset_index(inplace=True)
+        return new_monthly_payment
+    except Exception as e:
+        raise ToolException("The search tool1 is not available.", e)
+
 
 class Nodes():
     def __init__(self):
-        self.audio=audio_node()
-        self.tools=tools_agent()
+        self.audio = audio_node()
+        self.tools = tools_agent()
 
     def customer_profile_summarizer(self, state):
         name = state['name']
@@ -67,7 +92,7 @@ class Nodes():
 
         }
 
-    def customer_voice_1(self,state,duration=5, fs=44100):
+    def customer_voice_1(self, state, duration=5, fs=44100):
         print('Recording...')
         name = state['name']
         myrecording = sd.rec(int(duration * fs), samplerate=fs, channels=2)
@@ -75,14 +100,14 @@ class Nodes():
         print('Recording complete.')
         filename = 'myrecording.wav'
         sf.write(filename, myrecording, fs)
-        audio_file = open(filename ,"rb")
-       # model = WhisperModel('base.en', device='cpu', compute_type="int8")
+        audio_file = open(filename, "rb")
+        # model = WhisperModel('base.en', device='cpu', compute_type="int8")
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file
         )
 
-        #for segment in segments:
+        # for segment in segments:
         #    transcription=segment.text
         return {
 
@@ -118,6 +143,7 @@ class Nodes():
         Profile = state['Profile']
         session_id = state['session_id']
         transcription = state['transcription']
+        adjustment = state['adjustment']
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         example = [
             {
@@ -169,16 +195,24 @@ class Nodes():
             examples=example,
         )
         system = """
-               You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a good payment history 
-               ,Might have some financal issue can you ask this person ,why didnt he paid this month,
-               urge him if he can pay some portion of the loan this month ,tell the customer you(Sandy) are ready to adjust the loan amount 
+               You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a
+                good payment history 
+               ,Might have some financal issue can you ask this person ,why didn't he paid this month,
+               urge him if he can pay some portion of the loan this month ,tell the customer you(Sandy) are ready to
+                adjust the loan amount 
                for him due to his good credit history
                First ask him if he ready for adjustment in his loan term ,then use adjust the loan amount 
-
+               The loan adjustment will be calculated at mean time so wait unitl this is calculated engage the user in 
+               conversation
+               
+               \nMake sure you dont repeat yourself during the conversation.\n
+               \nMake the conversation in telephonic ,make it small and sweet\n
                """
-        human = """Make sure you dont repeat yourself during the conversation.
-                    Make the conversation in telephonic ,make it small and sweet
-                   Here is the customer profile {profile} \n\nHere is the user response {userquery}"""
+        human = """
+                   Here is the customer profile {profile} \n\nHere is the user response {user-query}
+                   \n\n Here is what he/she needs to pay after adjustment (this might not be calculated yet)\n\n
+                   {adjustment}                  
+                   """
 
         final_prompt = ChatPromptTemplate.from_messages(
             [
@@ -193,12 +227,13 @@ class Nodes():
             lambda session_id: SQLChatMessageHistory(
                 session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
             ),
-            input_messages_key="userquery",
+            input_messages_key="user-query",
             history_messages_key="history",
         )
 
-        generation = with_message_history.invoke({"profile": Profile, "userquery": transcription},
-                                                    config={"configurable": {"session_id": session_id}})
+        generation = with_message_history.invoke({"profile": Profile, "user-query": transcription,
+                                                  "adjustment": adjustment},
+                                                 config={"configurable": {"session_id": session_id}})
         self.audio.streamed_audio(generation)
         return {
             "generation": generation,
@@ -206,7 +241,7 @@ class Nodes():
 
     def Bad_Profile_Chain(self, state):
         profile = state['Profile']
-        session_id=state['session_id']
+        session_id = state['session_id']
         transcription = state['transcription']
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         system = """You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a bad payment history of payments
@@ -215,7 +250,10 @@ class Nodes():
         This is a telephonic call so make a call ,talk in a that manner in small and precise manner
         After making the call/concluding the conversation just say Goodbye """
         human = """Make sure you dont repeat yourself during the conversation.
-                    Here is the customer profile {profile} \n\n Here is the user response \n\n ---{userquery}"""
+                    Here is the customer profile {profile} \n\n Here is the user response \n\n ---{user-query}
+                
+                    
+                    """
         final_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
@@ -229,23 +267,25 @@ class Nodes():
             lambda session_id: SQLChatMessageHistory(
                 session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
             ),
-            input_messages_key="userquery",
+            input_messages_key="user-query",
             history_messages_key="history",
         )
-        generation = with_message_history.invoke({"profile": profile, "userquery": transcription},
-                                                 config={"configurable": {"session_id":session_id }})
+        generation = with_message_history.invoke({"profile": profile, "user-query": transcription,
+                                                  },
+                                                 config={"configurable": {"session_id": session_id}})
 
         self.audio.streamed_audio(generation)
         return {
             "generation": generation,
         }
 
-    def grade_conversation(self,state):
+    def grade_conversation(self, state):
         class GradeConclusion(BaseModel):
             """Binary score for conversation to see if the conversation has been reached in conclusion
             typically indicates that conversation have been completed  ."""
 
             binary_score: str = Field(description="Conversation has been reached to conclusion/completed 'yes' or 'no'")
+
         generation = state['generation']
         llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
         structured_llm_grader = llm.with_structured_output(GradeConclusion)
@@ -258,7 +298,7 @@ class Nodes():
                 ("human", "User question: {conversation}"),
             ]
         )
-        retrieval_grader= grade_prompt | structured_llm_grader
+        retrieval_grader = grade_prompt | structured_llm_grader
         score = retrieval_grader.invoke({"conversation": generation})
         grade = score.binary_score
         if grade == "yes":
@@ -300,41 +340,42 @@ class Nodes():
             print("--FORKING TO POOR  PROFILE CHAIN")
             return "Bad_Profile_Voice"
 
-    def grade_loan_adjustment(self,state):
-      print("CHECKING IF THE LOAN ADJUSTMENT HAS BEEN DONE")
-      ai_voice=state['generation']
-      class Grade_loan_modification(BaseModel):
-          """Binary score for conversation to see if loan adjustment has been done or not
+    def grade_loan_adjustment(self, state):
+        print("CHECKING IF THE LOAN ADJUSTMENT HAS BEEN DONE")
+        ai_voice = state['generation']
+
+        class Grade_loan_modification(BaseModel):
+            """Binary score for conversation to see if loan adjustment has been done or not
           """
 
-          binary_score: str = Field(description="Conversation has been reached to Loan modification terms 'yes' or 'no'")
+            binary_score: str = Field(
+                description="Conversation has been reached to Loan modification terms 'yes' or 'no'")
 
-      system = """ As a grader assessing the conversation between the user and AI,your task is to determine if the conversation contains
+        system = """ As a grader assessing the conversation between the user and AI,your task is to determine if the conversation contains
       keyword or semantic cues that signals any loan modification verdict such 'We will be adjusting your loan terms' .Grade it as relevant if such indicators are present.
       Provide a binary score of 'yes' or 'no' to indicate whether the conversation has loan modification term in it 
       'yes' means the conversation has reached to loan modification , and 'no' means it has no
       """
-      llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
-      structured_llm_grader = llm.with_structured_output(Grade_loan_modification)
-      grade_prompt = ChatPromptTemplate.from_messages(
-          [
-              ("system", system),
-              ("human", "User question: {conversation}"),
-          ]
-      )
-      retrieval_grader_1 = grade_prompt | structured_llm_grader
-      score=retrieval_grader_1.invoke({"conversation":ai_voice})
-      grade = score.binary_score
-      if grade == "yes":
-          print("--CONVERSATION ROUTED TO LOAN ADJUSTMENT")
-          return "Loan_Adjustment_Agent"
-      else:
-          print("--LOAN ADJUSTMENT HAS NOT BEEN DONE")
-          return "customer_voice"
+        llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
+        structured_llm_grader = llm.with_structured_output(Grade_loan_modification)
+        grade_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", "User question: {conversation}"),
+            ]
+        )
+        retrieval_grader_1 = grade_prompt | structured_llm_grader
+        score = retrieval_grader_1.invoke({"conversation": ai_voice})
+        grade = score.binary_score
+        if grade == "yes":
+            print("--CONVERSATION ROUTED TO LOAN ADJUSTMENT")
+            return "Loan_Adjustment_Agent"
+        else:
+            print("--LOAN ADJUSTMENT HAS NOT BEEN DONE")
+            return "customer_voice"
 
-
-    def loan_adjustment_agent(self,state):
-        generation=state['generation']
+    def loan_adjustment_agent(self, state):
+        generation = state['generation']
         system = """
         You are loan agent that helps people calculate their monthly payment with the available tool you calculate them their annual loan 
         Your final answer should include what their loan amount they will pay this month
@@ -386,13 +427,13 @@ class Nodes():
                 MessagesPlaceholder("agent_scratchpad"),
             ]
         )
-        llm=ChatOpenAI(model='gpt-3.5-turbo')
-        tools = [self.tools.monthly_payment()]
+        llm = ChatOpenAI(model='gpt-3.5-turbo')
+        tools = [monthly_payment]
         agent = create_json_chat_agent(llm, tools, prompt)
         agent_executor = AgentExecutor(
             agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
         )
-        generation=agent_executor.invoke({"input":generation})
+        generation = agent_executor.invoke({"input": generation})
         return {
-            "generation": generation
+            "adjustment": generation['output']
         }
