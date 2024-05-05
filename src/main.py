@@ -1,13 +1,14 @@
 from graph import WorkFlow
 from pprint import pprint
-app = WorkFlow().app
 
+app = WorkFlow().app
 
 # Run
 inputs = {
 
-        "name":"James",
-        "session_id":"james44444r"
+    "name": "James",
+    "session_id": "jamesEEEcr7messiZLA",
+    "generation": "hellow world"
 
 }
 for output in app.stream(inputs):
@@ -17,5 +18,3 @@ for output in app.stream(inputs):
         # Optional: print full state at each node
         # pprint.pprint(value["keys"], indent=2, width=80, depth=None)
     pprint("\n---\n")
-
-

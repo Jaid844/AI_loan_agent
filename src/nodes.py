@@ -204,9 +204,9 @@ class Nodes():
                First ask him if he ready for adjustment in his loan term ,then use adjust the loan amount 
                The loan adjustment will be calculated at mean time so wait unitl this is calculated engage the user in 
                conversation
-               
-               \nMake sure you dont repeat yourself during the conversation.\n
-               \nMake the conversation in telephonic ,make it small and sweet\n
+               ---POINT TO REMEMBER---
+               Make sure you dont repeat yourself during the conversation.
+               Make the conversation in telephonic ,make it small and sweet
                """
         human = """
                    Here is the customer profile {profile} \n\nHere is the user response {user-query}
@@ -302,10 +302,10 @@ class Nodes():
         score = retrieval_grader.invoke({"conversation": generation})
         grade = score.binary_score
         if grade == "yes":
-            print("--CONVERSATION ENDED")
+            print("-----CONVERSATION ENDED----")
             return "END"
         else:
-            print("--Conversation CONTINUES")
+            print("----Conversation CONTINUES-----")
             return "customer_voice"
 
     def grade_profile(self, state):
@@ -334,14 +334,15 @@ class Nodes():
 
         score = customer_profile_grader.invoke({"profile": Profile})
         if score.binary_score == "Good":
-            print("--FORKING TO GOOD  PROFILE CHAIN")
+            print("-----FORKING TO GOOD  PROFILE CHAIN-----")
             return "Good_Profile_Voice"
         else:
-            print("--FORKING TO POOR  PROFILE CHAIN")
+            print("-----FORKING TO POOR  PROFILE CHAIN-----")
             return "Bad_Profile_Voice"
 
     def grade_loan_adjustment(self, state):
         print("CHECKING IF THE LOAN ADJUSTMENT HAS BEEN DONE")
+        transcription = state['transcription']
         ai_voice = state['generation']
 
         class Grade_loan_modification(BaseModel):
@@ -351,30 +352,30 @@ class Nodes():
             binary_score: str = Field(
                 description="Conversation has been reached to Loan modification terms 'yes' or 'no'")
 
-        system = """ As a grader assessing the conversation between the user and AI,your task is to determine if the conversation contains
-      keyword or semantic cues that signals any loan modification verdict such 'We will be adjusting your loan terms' .Grade it as relevant if such indicators are present.
-      Provide a binary score of 'yes' or 'no' to indicate whether the conversation has loan modification term in it 
-      'yes' means the conversation has reached to loan modification , and 'no' means it has no
+        system = """ As a grader assessing the conversation between the user and AI,your task is to determine 
+        if the user(human) has agreed to loan modification in his loan ,'yes' meaning he has agreed to loan modication 
+        'no' meaning the loan modification has not  occurred
       """
         llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
         structured_llm_grader = llm.with_structured_output(Grade_loan_modification)
         grade_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
-                ("human", "User question: {conversation}"),
+                ("human", "Present User response: {conversation}  Previous AI voice :{ai_voice}"),
             ]
         )
         retrieval_grader_1 = grade_prompt | structured_llm_grader
-        score = retrieval_grader_1.invoke({"conversation": ai_voice})
+        score = retrieval_grader_1.invoke({"conversation": transcription, "ai_voice": ai_voice})
         grade = score.binary_score
         if grade == "yes":
-            print("--CONVERSATION ROUTED TO LOAN ADJUSTMENT")
+            print("-----CONVERSATION ROUTED TO LOAN ADJUSTMENT-----")
             return "Loan_Adjustment_Agent"
         else:
-            print("--LOAN ADJUSTMENT HAS NOT BEEN DONE")
-            return "customer_voice"
+            print("------LOAN ADJUSTMENT HAS NOT BEEN DONE------")
+            return "ai_voice"
 
     def loan_adjustment_agent(self, state):
+        print("---ADJUSTING LOAN OF GIVEN CUSTOMER----")
         generation = state['generation']
         system = """
         You are loan agent that helps people calculate their monthly payment with the available tool you calculate them their annual loan 
