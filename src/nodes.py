@@ -1,6 +1,12 @@
 import os
 import time
 
+from langchain_core.messages import ToolMessage
+from langchain_core.utils.function_calling import convert_to_openai_function
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.graph import END, StateGraph
+from state import *
+from typing import Callable
 import pandas as pd
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
@@ -29,6 +35,7 @@ from tools import tools_agent
 from langchain.cache import InMemoryCache
 from langchain.globals import set_llm_cache
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.runnables import Runnable, RunnableConfig, RunnableLambda
 
 load_dotenv()
 # set_llm_cache(InMemoryCache())
@@ -143,8 +150,8 @@ class Nodes():
         Profile = state['Profile']
         session_id = state['session_id']
         transcription = state['transcription']
-        adjustment = state['adjustment']
-        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        #llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
         example = [
             {
                 "Loan Agent (Sandy)": " Good morning/afternoon, [Customer's Name]. This is Sandy calling from ABC bank. I hope you're doing well today.?",
@@ -195,23 +202,23 @@ class Nodes():
             examples=example,
         )
         system = """
-               You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a
+               You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has a
                 good payment history 
-               ,Might have some financal issue can you ask this person ,why didn't he paid this month,
-               urge him if he can pay some portion of the loan this month ,tell the customer you(Sandy) are ready to
-                adjust the loan amount 
-               for him due to his good credit history
-               First ask him if he ready for adjustment in his loan term ,then use adjust the loan amount 
-               The loan adjustment will be calculated at mean time so wait unitl this is calculated engage the user in 
-               conversation
-               ---POINT TO REMEMBER---
-               Make sure you dont repeat yourself during the conversation.
-               Make the conversation in telephonic ,make it small and sweet
+               This is going to be a telephonic call so play along have a small conversation
+               Your primary role is to help customer to find reason why didn't he paid the loan this month
+               after that ,ask the customer would he like to discount some of his loan amount ,call the given
+               assistant for this task .
+               delegate the task to the appropriate specialized assistant by invoking the corresponding tool. 
+               For the discount in his outstanding loan ,call the assistant for this
+               You are not able to make these types of changes yourself.
+               The user is not aware of the different specialized assistants,
+               so do not mention them; just quietly delegate through function calls
+               When searching, be persistent. Expand your query bounds if the first search returns no results.
+               If a search comes up empty, expand your search before giving up.
                """
         human = """
                    Here is the customer profile {profile} \n\nHere is the user response {user-query}
-                   \n\n Here is what he/she needs to pay after adjustment (this might not be calculated yet)\n\n
-                   {adjustment}                  
+                                    
                    """
 
         final_prompt = ChatPromptTemplate.from_messages(
@@ -221,7 +228,9 @@ class Nodes():
                 ("human", human),
             ]
         )
-        rag_chain = final_prompt | llm | StrOutputParser()
+        tools=[To_Loan_tool_1]
+        functions=[convert_to_openai_function(t) for t in tools]
+        rag_chain = final_prompt | llm.bind_tools([To_Loan_tool_1],tool_choice='To_Loan_tool_1')
         with_message_history = RunnableWithMessageHistory(
             rag_chain,
             lambda session_id: SQLChatMessageHistory(
@@ -230,13 +239,12 @@ class Nodes():
             input_messages_key="user-query",
             history_messages_key="history",
         )
-
-        generation = with_message_history.invoke({"profile": Profile, "user-query": transcription,
-                                                  "adjustment": adjustment},
-                                                 config={"configurable": {"session_id": session_id}})
-        self.audio.streamed_audio(generation)
+        generation = with_message_history.invoke({"profile": Profile, "user-query": transcription},
+                                                config={"configurable": {"session_id": session_id}})
+        #generation=rag_chain.invoke({"profile": Profile, "user-query": transcription})
+        self.audio.streamed_audio(generation.content)
         return {
-            "generation": generation,
+            "messages": generation,
         }
 
     def Bad_Profile_Chain(self, state):
@@ -286,8 +294,8 @@ class Nodes():
 
             binary_score: str = Field(description="Conversation has been reached to conclusion/completed 'yes' or 'no'")
 
-        generation = state['generation']
-        llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
+        generation = state['messages']
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
         structured_llm_grader = llm.with_structured_output(GradeConclusion)
         system = """As a grader assessing the conversation between the user and AI, your task is to determine if the conversation contains keywords or semantic cues that signal the conclusion of the interaction, such as "Bye." Grade it as relevant if such indicators are present.
         Provide a binary score of 'yes' or 'no' to indicate whether the conversation has concluded. 'yes' means the conversation has ended, and 'no' means it is still ongoing.
@@ -438,3 +446,192 @@ class Nodes():
         return {
             "adjustment": generation['output']
         }
+
+
+class CompleteOrEscalate(BaseModel):
+    """A tool to mark the current task as completed and/or to escalate control of the dialog to the main assistant,
+    who can re-route the dialog based on the user's needs."""
+
+    cancel: bool = True
+    reason: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "cancel": True,
+                "reason": "User changed their mind about the current task.",
+            },
+            "example 2": {
+                "cancel": True,
+                "reason": "I have fully completed the task.",
+            },
+            "example 3": {
+                "cancel": False,
+                "reason": "I need to search the user's emails or calendar for more information.",
+            },
+        }
+
+
+class To_Loan_tool_1(BaseModel):
+    """Transfers work to a specialized assistant to handle calculating loan adjustments for given name of the customer
+    When user wants to have discount in his loan amount
+    """
+
+    name: str = Field(
+        description="The name of the person who loan deduction will be done."
+    )
+    reason: str = Field(description="If the user state he would like to have his loan to have some discount")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Lucy",
+                "reason": "Yes ,please I would like to have to have discount in my outstanding loan"
+            }
+        }
+
+
+def create_entry_node(assistant_name: str, new_dialog_state: str) -> Callable:
+    def entry_node(state: State) -> dict:
+        tool_call_id = state["messages"][-1].tool_calls[0]["id"]
+        return {
+            "messages": [
+                ToolMessage(
+                    content=f"The assistant is now the {assistant_name}. Reflect on the above conversation between "
+                            f"the host assistant and the user."
+                            f" The user's intent is unsatisfied. Use the provided tools to assist the user. Remember, "
+                            f"you are {assistant_name},"
+                            " and the booking, update, other other action is not complete until after you have "
+                            "successfully invoked the appropriate tool."
+                            " If the work with the tool is finished  call the CompleteOrEscalate function to let the "
+                            "primary host assistant take control."
+                            " Do not mention who you are - just act as the proxy for the assistant.",
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "dialog_state": new_dialog_state,
+        }
+
+    return entry_node
+
+
+class Assistant:
+    def __init__(self, runnable: Runnable):
+        self.runnable = runnable
+
+    def __call__(self, state: State, config: RunnableConfig):
+        while True:
+            result = self.runnable.invoke(state)
+
+            if not result.tool_calls and (
+                    not result.content
+                    or isinstance(result.content, list)
+                    and not result.content[0].get("text")
+            ):
+                messages = state["messages"] + [("user", "Respond with a real output.")]
+                state = {**state, "messages": messages}
+                messages = state["messages"] + [("user", "Respond with a real output.")]
+                state = {**state, "messages": messages}
+            else:
+                break
+        return {"messages": result}
+
+
+def handle_tool_error(state) -> dict:
+    error = state.get("error")
+    tool_calls = state["messages"][-1].tool_calls
+    return {
+        "messages": [
+            ToolMessage(
+                content=f"Error: {repr(error)}\n please fix your mistakes.",
+                tool_call_id=tc["id"],
+            )
+            for tc in tool_calls
+        ]
+    }
+
+
+def create_tool_node_with_fallback(tools: list) -> dict:
+    return ToolNode(tools).with_fallbacks(
+        [RunnableLambda(handle_tool_error)], exception_key="error"
+    )
+
+
+def route_in(
+        state: State,
+) -> Literal[
+    "tool_use_loan",
+    "leave_skill",
+]:
+    route = tools_condition(state)
+    tool_calls = state["messages"][-1].tool_calls
+    did_cancel = any(tc["name"] == CompleteOrEscalate.__name__ for tc in tool_calls)
+    if did_cancel:
+        return "leave_skill"
+    loan_tool = [monthly_payment]
+    safe_toolnames = [t.name for t in loan_tool]
+    if all(tc["name"] in safe_toolnames for tc in tool_calls):
+        return "tool_use_loan"
+    raise ValueError("Bad Route")
+
+
+def pop_dialog_state(state: State) -> dict:
+    """Pop the dialog stack and return to the main assistant.
+
+    This lets the full graph explicitly track the dialog flow and delegate control
+    to specific sub-graphs.
+    """
+    messages = []
+    if state["messages"][-1].tool_calls:
+        # Note: Doesn't currently handle the edge case where the llm performs parallel tool calls
+        messages.append(
+            ToolMessage(
+                content="Resuming dialog with the host assistant. Please reflect on the past conversation and assist the user as needed.",
+                tool_call_id=state["messages"][-1].tool_calls[0]["id"],
+            )
+        )
+    return {
+        "dialog_state": "pop",
+        "messages": messages,
+    }
+
+
+def loan_tool_chain() -> Runnable:
+    llm = ChatOpenAI(model="gpt-3.5-turbo")
+    book_hotel_prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a specialized assistant for calculating loan amount of a customer "
+                "The primary assistant delegates work to you whenever the user needs help with calculating loan amount"
+                " When searching, be persistent. Expand your query bounds if the first search returns no results. "
+                "Once you have calculated laon amount delgate back to  main assistant."
+                " Remember that a loan amount  isn't completed until after the relevant tool has successfully been used."
+                ' and none of your tools are appropriate for it, then "CompleteOrEscalate" the dialog to the host assistant.'
+                " Do not waste the user's time. Do not make up invalid tools or functions."
+                "\n\nSome examples for which you should CompleteOrEscalate:\n"
+                " - 'Loan amount calcualted '",
+            ),
+            ("placeholder", "{messages}"),
+        ]
+    )
+    tool_1 = [monthly_payment]
+    loan_tool_callable = book_hotel_prompt | llm.bind_tools(
+        tool_1 + [CompleteOrEscalate]
+    )
+    return loan_tool_callable
+
+
+def route_primary_assistant(
+        state: State,
+) -> Literal[
+    "enter_loan_tool",
+    "Good_customer_voice_1"
+
+]:
+    tool_calls = state["messages"][-1].tool_calls
+    if tool_calls:
+        if tool_calls[0]["name"] == To_Loan_tool_1.__name__:
+            return "enter_loan_tool"
+        return "Good_customer_voice_1"
+    return "enter_loan_tool"

@@ -1,9 +1,15 @@
-from typing import Annotated, Dict, TypedDict
-
+from typing import Annotated, Dict, TypedDict, Literal, Optional
+from langgraph.graph.message import AnyMessage, add_messages
 from typing import List
+def update_dialog_stack(left: list[str], right: Optional[str]) -> list[str]:
+    """Push or pop the state."""
+    if right is None:
+        return left
+    if right == "pop":
+        return left[:-1]
+    return left + [right]
 
-
-class GraphState(TypedDict):
+class State(TypedDict):
     """
     Represents the state of our graph.
 
@@ -11,8 +17,16 @@ class GraphState(TypedDict):
         keys: A dictionary where each key is a string.
     """
     transcription: str
-    generation: str
+    messages:Annotated[list[AnyMessage], add_messages]
     name: str
     Profile: List[str]
     session_id: str
-    adjustment: str
+    dialog_state: Annotated[
+        list[
+            Literal[
+                "assistant",
+                "Loan_Calculator_chain"
+            ]
+        ],
+        update_dialog_stack,
+    ]

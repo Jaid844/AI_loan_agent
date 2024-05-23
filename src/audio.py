@@ -16,7 +16,7 @@ class audio_node:
         # OpenAI API endpoint and parameters
         url = "https://api.openai.com/v1/audio/speech"
         headers = {
-            "Authorization": 'Bearer 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',  # Replace with your API key
+            "Authorization": 'Bearer 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',  # Replace with your API key
         }
 
         data = {
@@ -57,9 +57,8 @@ class audio_node:
                     stream.stop_stream()
                     stream.close()
             else:
-                print(f"Error: {response.status_code} - {response.text}")
+                print(f"Error from audio: {response.status_code} - {response.text}")
 
             audio.terminate()
-
 
 
