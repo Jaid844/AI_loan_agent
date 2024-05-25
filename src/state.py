@@ -16,16 +16,14 @@ class State(TypedDict):
     Attributes:
         keys: A dictionary where each key is a string.
     """
-    transcription: str
     messages:Annotated[list[AnyMessage], add_messages]
-    name: str
-    Profile: List[str]
-    session_id: str
+    profile: List[str]
+    name:str
     dialog_state: Annotated[
         list[
             Literal[
                 "assistant",
-                "Loan_Calculator_chain"
+                "update_loan"
             ]
         ],
         update_dialog_stack,

@@ -6,14 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="64583063-63fb-478e-8f6e-c03751244612" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rough.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/rough.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/audio.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/graph.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/history_of_conversation.db" beforeDir="false" afterPath="$PROJECT_DIR$/src/history_of_conversation.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/myrecording.wav" beforeDir="false" afterPath="$PROJECT_DIR$/src/myrecording.wav" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nodes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/state.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tools.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -117,8 +114,18 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/main.py</url>
-          <line>14</line>
-          <option name="timeStamp" value="4" />
+          <line>23</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/nodes.py</url>
+          <line>72</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/nodes.py</url>
+          <line>130</line>
+          <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

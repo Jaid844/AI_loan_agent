@@ -1,20 +1,29 @@
+import uuid
+
+from langgraph.checkpoint.sqlite import SqliteSaver
+
 from graph import WorkFlow
 from pprint import pprint
 
+from src.tools import _print_event
+from tools import *
+
 app = WorkFlow().app
+thread_id = str(uuid.uuid4())
+_printed = set()
 
-# Run
-inputs = {
-
-    "name": "James",
-    "session_id": "jamer_1",
-    "generation":"eeee"
-
+config = {
+    "configurable": {
+        # Checkpoints are accessed by thread_id
+        "thread_id": thread_id,
+        "name": "James",
+    }
 }
-for output in app.stream(inputs):
-    for key, value in output.items():
-        # Node
-        pprint(f"Node '{key}':")
-        # Optional: print full state at each node
-        # pprint.pprint(value["keys"], indent=2, width=80, depth=None)
-    pprint("\n---\n")
+qn = ["Hi what is this call about",
+      "Yeah I would like a loan adjusment"]
+for question in qn:
+    events = app.stream(
+        {"messages": ("user", question)}, config, stream_mode="values"
+    )
+    for event in events:
+        _print_event(event, _printed)
