@@ -5,4 +5,6 @@ from langchain_voyageai.embeddings import VoyageAIEmbeddings
 
 st.title("Call recorder")
 recorded_audio=audio_recorder()
+if recorded_audio:
+    st.write(recorded_audio)
 

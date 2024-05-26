@@ -12,6 +12,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from tools import *
 from state import State
 from langchain_core.pydantic_v1 import BaseModel, Field
+from  audio import audio_node
 load_dotenv()
 tools=[monthly_payment]
 
@@ -67,10 +68,12 @@ class To_Loan_tool_1(BaseModel):
 class Assistant:
     def __init__(self, runnable: Runnable):
         self.runnable = runnable
-
+        self.audio = audio_node()
     def __call__(self, state: State, config: RunnableConfig):
         while True:
             result = self.runnable.invoke(state)
+            self.audio.streamed_audio(result.content)
+
 
             if not result.tool_calls and (
                     not result.content
@@ -88,7 +91,7 @@ class Assistant:
 
 class Nodes():
     def __init__(self):
-        pass
+        self.audio=audio_node()
 
     def customer_profile_summarizer(self, state):
         config = ensure_config()  # Fetch from the context
@@ -126,6 +129,7 @@ class Nodes():
              ("human", human)]
         )
         llm = ChatOpenAI(model='gpt-4o')
+        #llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         tools = [To_Loan_tool_1]
         primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(tools)
         return primary_assitant_runnable
