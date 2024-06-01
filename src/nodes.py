@@ -1,5 +1,6 @@
 import os
 from typing import Callable
+from langchain_core.messages import HumanMessage
 from typing import Literal
 from langgraph.graph import END
 from langchain_core.messages import ToolMessage
@@ -12,13 +13,15 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from tools import *
 from state import State
 from langchain_core.pydantic_v1 import BaseModel, Field
-from  audio import audio_node
+from audio import audio_node
+
 load_dotenv()
-tools=[monthly_payment]
+tools = [monthly_payment]
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"] = "Loan Agent adjustment"
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 
 class CompleteOrEscalate(BaseModel):
     """A tool to mark the current task as completed and/or to escalate control of the dialog to the main assistant,
@@ -35,14 +38,33 @@ class CompleteOrEscalate(BaseModel):
             },
             "example 2": {
                 "cancel": True,
-                "reason": "I have fully completed the task.",
+                "reason": "I have fully calculated the loan amount ,",
             },
             "example 3": {
                 "cancel": False,
                 "reason": "I need to search the user's emails or calendar for more information.",
             },
+
         }
 
+
+class End_of_conversation(BaseModel):
+    """
+    A tool to mark the end of the conversation ,if there is slight suggestion that the conversation has been concluded
+    """
+    dialogue: str = Field(
+        description="The converstion if there is the end of the conversation"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "dialogue": "Thanks ,bye",
+            },
+            "example": {
+                "dialogue": "if you need anything just call us ,take care bye",
+            }
+        }
 
 class To_Loan_tool_1(BaseModel):
     """
@@ -66,14 +88,16 @@ class To_Loan_tool_1(BaseModel):
 
 
 class Assistant:
+
     def __init__(self, runnable: Runnable):
         self.runnable = runnable
         self.audio = audio_node()
+
     def __call__(self, state: State, config: RunnableConfig):
         while True:
-            result = self.runnable.invoke(state)
-            self.audio.streamed_audio(result.content)
+            result = self.runnable.invoke(state)  # the input are converted into dictionary key value pair
 
+            # self.audio.streamed_audio(result.content)
 
             if not result.tool_calls and (
                     not result.content
@@ -91,7 +115,7 @@ class Assistant:
 
 class Nodes():
     def __init__(self):
-        self.audio=audio_node()
+        self.audio = audio_node()
 
     def customer_profile_summarizer(self, state):
         config = ensure_config()  # Fetch from the context
@@ -108,7 +132,7 @@ class Nodes():
         rag_chain = prompt | llm | StrOutputParser()
         generation = rag_chain.invoke({"context": documents})
         return {
-            "Profile": generation,
+            "profile": generation,
         }
 
     def primary_assistant(self):
@@ -118,25 +142,37 @@ class Nodes():
                  Your primary role is to help customer to find reason why didn't he paid the loan this month
                  First,Ask him is he is willing to pay some portion of the outstanding amount this month
                  if he agress to pay some amount then then quietly delegate calculation of work to another agent 
-                 without letting know about this agent and calculate the loan amount ,Ask him if he agress to pay this amount 
-                 if he agress to pay that amount then tell him this will be his new amount this month
-                 and then end the conversation 
+                 without letting know about this agent and calculate the loan amount ,
+                 this agent will calculate the loan amount for you ,you dont have to worry
+                 after another agent calculate the loan amount ,
+                 You just need first name to calculate the loan amount 
+                 when the loan amount will be calculated the agent will tell you
+                 "loan amount calculated"
+                 Ask him if he agress to pay this 
+                 amount if he agrees to pay that amount then tell him this will be his new amount this month
+                 
                 """
-        human = """ Here is the customer profile {profile} \n\nHere is the user response {messages}
+        human = """ Here is the customer profile {profile} \n\nHere is the user response -- {human_messages}
+        \n\n Here is the name of the customer {name}
                  """
         primary_assitant_prompt = ChatPromptTemplate.from_messages(
             [("system", system),
              ("human", human)]
         )
-        llm = ChatOpenAI(model='gpt-4o')
-        #llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        #llm = ChatOpenAI(model='gpt-4o')
+        llm = ChatOpenAI(model='gpt-3.5-turbo')
+        # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
         tools = [To_Loan_tool_1]
-        primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(tools)
+        primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(tools+[End_of_conversation])
         return primary_assitant_runnable
 
     def tool_runnable(self):
-        llm = ChatOpenAI(model='gpt-4o')
-        book_hotel_prompt = ChatPromptTemplate.from_messages(
+        #llm = ChatOpenAI(model='gpt-3.5-turbo')
+        llm = ChatOpenAI(model='gpt-4o')#
+        # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+        loan_hotel_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system",
                  "You are a specialized assistant for calculating loan amount of a customer "
@@ -146,19 +182,22 @@ class Nodes():
                  " Remember that a loan amount  isn't completed until after the relevant tool has successfully been used."
                  ' then "CompleteOrEscalate" the dialog to the host assistant.'
                  " Do not waste the user's time. Do not make up invalid tools or functions."
+                 "You dont need first name of the customer that's it"
+                " then end the conversation by say such word as bye "
+                 "You just need first name to calculate the loan amount "
+                 "Name of the customer is {name}"
                  "\n\nSome examples for which you should CompleteOrEscalate:\n"
                  " - 'Loan amount calcualted '",
                  ),
-                ("placeholder", "{messages}")
+                ("human", "here is the human reply \n\n{human_messages}")
             ]
         )
         tool_1 = [monthly_payment]
-        loan_tool_runnable = book_hotel_prompt | llm.bind_tools(tool_1 + [CompleteOrEscalate]
-                                                                )
+        loan_tool_runnable = loan_hotel_prompt | llm.bind_tools(tool_1 + [CompleteOrEscalate])
+
         return loan_tool_runnable
 
-
-    def create_entry_node(self,assistant_name: str, new_dialog_state: str) -> Callable:
+    def create_entry_node(self, assistant_name: str, new_dialog_state: str) -> Callable:
         def entry_node(state: State) -> dict:
             tool_call_id = state["messages"][-1].tool_calls[0]["id"]
             return {
@@ -196,9 +235,8 @@ class Nodes():
         )
 
 
-
 def route_to_tool(
-    state: State,
+        state: State,
 ) -> Literal[
     "tool_use",
     "leave_skill",
@@ -214,6 +252,7 @@ def route_to_tool(
     safe_toolnames = [t.name for t in tools]
     if all(tc["name"] in safe_toolnames for tc in tool_calls):
         return "tool_use"
+
 
 def pop_dialog_state(state: State) -> dict:
     """Pop the dialog stack and return to the main assistant.
@@ -235,8 +274,9 @@ def pop_dialog_state(state: State) -> dict:
         "messages": messages,
     }
 
+
 def route_primary_assistant(
-    state: State,
+        state: State,
 ) -> Literal[
     "enter_loan_tool",
     "__end__",
@@ -248,10 +288,13 @@ def route_primary_assistant(
     if tool_calls:
         if tool_calls[0]["name"] == To_Loan_tool_1.__name__:
             return "enter_loan_tool"
+        elif tool_calls[0]["name"] == End_of_conversation.__name__:
+            return END
     raise ValueError("Invalid route")
 
+
 def route_to_workflow(
-    state: State,
+        state: State,
 ) -> Literal[
     "primary_assistant",
     "update_loan"
@@ -260,4 +303,3 @@ def route_to_workflow(
     if not dialog_state:
         return "primary_assistant"
     return dialog_state[-1]
-

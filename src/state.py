@@ -1,6 +1,9 @@
 from typing import Annotated, Dict, TypedDict, Literal, Optional
 from langgraph.graph.message import AnyMessage, add_messages
 from typing import List
+from langchain_core.messages import HumanMessage
+
+
 def update_dialog_stack(left: list[str], right: Optional[str]) -> list[str]:
     """Push or pop the state."""
     if right is None:
@@ -9,6 +12,7 @@ def update_dialog_stack(left: list[str], right: Optional[str]) -> list[str]:
         return left[:-1]
     return left + [right]
 
+
 class State(TypedDict):
     """
     Represents the state of our graph.
@@ -16,9 +20,10 @@ class State(TypedDict):
     Attributes:
         keys: A dictionary where each key is a string.
     """
-    messages:Annotated[list[AnyMessage], add_messages]
+    messages: Annotated[list[AnyMessage], add_messages]
+    human_messages:List[HumanMessage]
     profile: List[str]
-    name:str
+    name: str
     dialog_state: Annotated[
         list[
             Literal[

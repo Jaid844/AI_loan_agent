@@ -12,8 +12,8 @@ class WorkFlow():
         nodes = Nodes()
         workflow = StateGraph(State)
         # ADDING NODES
-        workflow.add_node("user_profile", nodes.customer_profile_summarizer)
-        workflow.set_entry_point("user_profile")
+        # workflow.add_node("user_profile", nodes.customer_profile_summarizer)
+        workflow.set_entry_point("primary_assistant")
         workflow.add_node("primary_assistant", Assistant(nodes.primary_assistant()))
         workflow.add_node("enter_loan_tool", nodes.create_entry_node("Loan_calculator_assistant", "update_loan"))
         workflow.add_node("update_loan", Assistant(nodes.tool_runnable()))
@@ -31,6 +31,6 @@ class WorkFlow():
                 END: END
             }
         )
-        workflow.add_conditional_edges("user_profile", route_to_workflow)
+        # workflow.add_conditional_edges("user_profile", route_to_workflow)
         memory = SqliteSaver.from_conn_string(":memory:")
         self.app = workflow.compile(checkpointer=memory)
