@@ -1,7 +1,7 @@
 from typing import Annotated, Dict, TypedDict, Literal, Optional
 from langgraph.graph.message import AnyMessage, add_messages
 from typing import List
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 
 def update_dialog_stack(left: list[str], right: Optional[str]) -> list[str]:
@@ -20,9 +20,10 @@ class State(TypedDict):
     Attributes:
         keys: A dictionary where each key is a string.
     """
-    messages: Annotated[list[AnyMessage], add_messages]
-    human_messages:List[HumanMessage]
+    messages: Annotated[list[AIMessage], add_messages]
+    human_messages: List[HumanMessage]
     profile: List[str]
+    session_id:str
     name: str
     dialog_state: Annotated[
         list[

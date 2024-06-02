@@ -14,9 +14,9 @@ class WorkFlow():
         # ADDING NODES
         # workflow.add_node("user_profile", nodes.customer_profile_summarizer)
         workflow.set_entry_point("primary_assistant")
-        workflow.add_node("primary_assistant", Assistant(nodes.primary_assistant()))
+        workflow.add_node("primary_assistant", nodes.primary_assistant)
         workflow.add_node("enter_loan_tool", nodes.create_entry_node("Loan_calculator_assistant", "update_loan"))
-        workflow.add_node("update_loan", Assistant(nodes.tool_runnable()))
+        workflow.add_node("update_loan", nodes.tool_runnable)
         workflow.add_edge("enter_loan_tool", "update_loan")
         workflow.add_node("tool_use", nodes.create_tool_node_with_fallback(tools))
         workflow.add_edge("tool_use", "update_loan")

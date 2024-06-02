@@ -6,10 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="64583063-63fb-478e-8f6e-c03751244612" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/audio.wav" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.wav" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/graph.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/history_of_conversation.db" beforeDir="false" afterPath="$PROJECT_DIR$/src/history_of_conversation.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nodes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/state.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,7 +48,7 @@
     &quot;last_opened_file_path&quot;: &quot;C:/Users/91639/Desktop/Loan Agents/loan_work/src/main.py&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.new_file">
+  <component name="RunManager" selected="Python.main">
     <configuration name="audio" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="loan_work" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -150,12 +151,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/main.py</url>
-          <line>26</line>
+          <line>29</line>
           <option name="timeStamp" value="4" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/nodes.py</url>
-          <line>307</line>
+          <line>324</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
       </breakpoints>

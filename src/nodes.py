@@ -141,12 +141,11 @@ class Nodes():
         }
 
     def primary_assistant(self, state):
-        name = state['name']
         human_messages = state['human_messages']
-        profile = state['profile']
         config = ensure_config()  # Fetch from the context
         configuration = config.get("configurable", {})
-        session_id = configuration.get("session_id", None)
+        name = configuration.get("name", None)
+        session_id = state['session_id']
         system = """You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has 
                   a good payment history
                   This is going to be a telephonic call so play along have a small conversation
@@ -164,7 +163,7 @@ class Nodes():
                  amount if he agrees to pay that amount then tell him this will be his new amount this month
                  
                 """
-        human = """ Here is the customer profile {profile} \n\nHere is the user response -- {human_messages}
+        human = """ \n\nHere is the user response -- {human_messages}
         \n\n Here is the name of the customer {name}
                  """
         primary_assitant_prompt = ChatPromptTemplate.from_messages(
@@ -187,15 +186,16 @@ class Nodes():
             input_messages_key="human_messages",
             history_messages_key="history",
         )
-        generation = with_message_history.invoke({"profile": profile, "human_messages": human_messages,
-                                                  },
+        generation = with_message_history.invoke({"human_messages": human_messages, "name": name},
                                                  config={"configurable": {"session_id": session_id}})
         self.audio.streamed_audio(generation)
         return {
-            "messages": generation
+            "messages": generation, "human_messages": human_messages
         }
 
-    def tool_runnable(self):
+    def tool_runnable(self, state):
+        session_id = state['session_id']
+        human_messages = state['human_messages']
         llm = ChatOpenAI(model='gpt-3.5-turbo')
         # llm = ChatOpenAI(model='gpt-4o')#
         # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
@@ -217,13 +217,26 @@ class Nodes():
                  "\n\nSome examples for which you should CompleteOrEscalate:\n"
                  " - 'Loan amount calcualted '",
                  ),
+                MessagesPlaceholder(variable_name="history"),
                 ("human", "here is the human reply \n\n{human_messages}")
             ]
         )
         tool_1 = [monthly_payment]
-        loan_tool_runnable = loan_hotel_prompt | llm.bind_tools(tool_1 + [CompleteOrEscalate])
-
-        return loan_tool_runnable
+        loan_tool_runnable = loan_hotel_prompt | llm.bind_tools(tool_1 + [CompleteOrEscalate]) | StrOutputParser()
+        with_message_history = RunnableWithMessageHistory(
+            loan_tool_runnable,
+            lambda session_id: SQLChatMessageHistory(
+                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
+            ),
+            input_messages_key="human_messages",
+            history_messages_key="history",
+        )
+        generation = with_message_history.invoke({"human_messages": human_messages},
+                                                 config={"configurable": {"session_id": session_id}})
+        self.audio.streamed_audio(generation)
+        return {
+            "messages": generation, "human_messages": human_messages
+        }
 
     def create_entry_node(self, assistant_name: str, new_dialog_state: str) -> Callable:
         def entry_node(state: State) -> dict:
