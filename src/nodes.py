@@ -1,7 +1,11 @@
 import os
 from typing import Callable
+
+from langchain_community.chat_message_histories.sql import SQLChatMessageHistory
 from langchain_core.messages import HumanMessage
 from typing import Literal
+
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from langgraph.graph import END
 from langchain_core.messages import ToolMessage
 from langchain_core.output_parsers import StrOutputParser
@@ -66,6 +70,7 @@ class End_of_conversation(BaseModel):
             }
         }
 
+
 class To_Loan_tool_1(BaseModel):
     """
     If user agrees to pay some portion of the loan this ,This agent will help to calculate loan amount
@@ -97,7 +102,7 @@ class Assistant:
         while True:
             result = self.runnable.invoke(state)  # the input are converted into dictionary key value pair
 
-            # self.audio.streamed_audio(result.content)
+            self.audio.streamed_audio(result.content)
 
             if not result.tool_calls and (
                     not result.content
@@ -135,13 +140,20 @@ class Nodes():
             "profile": generation,
         }
 
-    def primary_assistant(self):
+    def primary_assistant(self, state):
+        name = state['name']
+        human_messages = state['human_messages']
+        profile = state['profile']
+        config = ensure_config()  # Fetch from the context
+        configuration = config.get("configurable", {})
+        session_id = configuration.get("session_id", None)
         system = """You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has 
                   a good payment history
                   This is going to be a telephonic call so play along have a small conversation
                  Your primary role is to help customer to find reason why didn't he paid the loan this month
-                 First,Ask him is he is willing to pay some portion of the outstanding amount this month
-                 if he agress to pay some amount then then quietly delegate calculation of work to another agent 
+                
+                 ask him you calculate the loan amount
+                   then then quietly delegate calculation of work to another agent 
                  without letting know about this agent and calculate the loan amount ,
                  this agent will calculate the loan amount for you ,you dont have to worry
                  after another agent calculate the loan amount ,
@@ -157,19 +169,35 @@ class Nodes():
                  """
         primary_assitant_prompt = ChatPromptTemplate.from_messages(
             [("system", system),
+             MessagesPlaceholder(variable_name="history"),
              ("human", human)]
         )
-        #llm = ChatOpenAI(model='gpt-4o')
+        # llm = ChatOpenAI(model='gpt-4o')
         llm = ChatOpenAI(model='gpt-3.5-turbo')
         # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
         tools = [To_Loan_tool_1]
-        primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(tools+[End_of_conversation])
-        return primary_assitant_runnable
+        primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(
+            tools + [End_of_conversation]) | StrOutputParser()
+        with_message_history = RunnableWithMessageHistory(
+            primary_assitant_runnable,
+            lambda session_id: SQLChatMessageHistory(
+                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
+            ),
+            input_messages_key="human_messages",
+            history_messages_key="history",
+        )
+        generation = with_message_history.invoke({"profile": profile, "human_messages": human_messages,
+                                                  },
+                                                 config={"configurable": {"session_id": session_id}})
+        self.audio.streamed_audio(generation)
+        return {
+            "messages": generation
+        }
 
     def tool_runnable(self):
-        #llm = ChatOpenAI(model='gpt-3.5-turbo')
-        llm = ChatOpenAI(model='gpt-4o')#
+        llm = ChatOpenAI(model='gpt-3.5-turbo')
+        # llm = ChatOpenAI(model='gpt-4o')#
         # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
         loan_hotel_prompt = ChatPromptTemplate.from_messages(
@@ -183,7 +211,7 @@ class Nodes():
                  ' then "CompleteOrEscalate" the dialog to the host assistant.'
                  " Do not waste the user's time. Do not make up invalid tools or functions."
                  "You dont need first name of the customer that's it"
-                " then end the conversation by say such word as bye "
+                 " then end the conversation by say such word as bye "
                  "You just need first name to calculate the loan amount "
                  "Name of the customer is {name}"
                  "\n\nSome examples for which you should CompleteOrEscalate:\n"

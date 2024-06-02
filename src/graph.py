@@ -3,10 +3,10 @@ from langgraph.graph import END, StateGraph
 from state import State
 from nodes import *
 from tools import *
-
+from langgraph.checkpoint.memory import MemorySaver
 tools = [monthly_payment]
 
-
+memory = MemorySaver()
 class WorkFlow():
     def __init__(self):
         nodes = Nodes()
@@ -32,5 +32,5 @@ class WorkFlow():
             }
         )
         # workflow.add_conditional_edges("user_profile", route_to_workflow)
-        memory = SqliteSaver.from_conn_string(":memory:")
+
         self.app = workflow.compile(checkpointer=memory)
