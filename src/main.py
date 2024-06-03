@@ -27,9 +27,10 @@ config = {
 }
 
 qn = [
-      "Yeah I would like a loan adjustment"]
+      "the reason i didnt pay for this month is i am unemployed",
+"Yeah I would like a loan adjustment,"]
 for question in qn:
-    for output in app.stream({"messages": question, "session_id": "6=","name":"James"}, config, ):
+    for output in app.stream({"human_messages": question, "session_id": "p","name":"James"}, config):
         for key, value in output.items():
             # Node
             pprint(f"Node '{key}':")

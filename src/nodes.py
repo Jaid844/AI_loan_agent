@@ -141,99 +141,90 @@ class Nodes():
         }
 
     def primary_assistant(self, state):
-        human_messages = state['messages']
-        config = ensure_config()  # Fetch from the context
+        human_messages = state['human_messages']
         name = state['name']
         session_id = state['session_id']
         system = """You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has 
                   a good payment history
                   This is going to be a telephonic call so play along have a small conversation
-                 Your primary role is to help customer to find reason why didn't he paid the loan this month
-                
-                 ask him you calculate the loan amount
-                   then then quietly delegate calculation of work to another agent 
-                 without letting know about this agent and calculate the loan amount ,
-                 this agent will calculate the loan amount for you ,you dont have to worry
-                 after another agent calculate the loan amount ,
-                 You just need first name to calculate the loan amount 
-                 when the loan amount will be calculated the agent will tell you
-                 "loan amount calculated"
-                 Ask him if he agress to pay this 
-                 amount if he agrees to pay that amount then tell him this will be his new amount this month
+                 Your primary role is to help customer to find reason why didn't he paid the loan this month                
+                 You will try to do loan adjustments ,for that you only need the first name,
+                You cannot calculate the loan adjustment ,there is seprate assistant that will be able to calculate the
+                loan adjustment for you,delegate this task to another agent quietly,The user does not need to know 
                  
                 """
-        human = """ \n\nHere is the user response -- {messages}
+        human = """ \n\nHere is the user response -- {human_messages}
         \n\n Here is the name of the customer {name}
                  """
         primary_assitant_prompt = ChatPromptTemplate.from_messages(
             [("system", system),
-             MessagesPlaceholder(variable_name="history"),
+             # MessagesPlaceholder(variable_name="history"),
              ("human", human)]
         )
         # llm = ChatOpenAI(model='gpt-4o')
         llm = ChatOpenAI(model='gpt-3.5-turbo')
         # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
-        tools = [To_Loan_tool_1]
         primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(
-            tools + [End_of_conversation]) | StrOutputParser()
-        with_message_history = RunnableWithMessageHistory(
-            primary_assitant_runnable,
-            lambda session_id: SQLChatMessageHistory(
-                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
-            ),
-            input_messages_key="messages",
-            history_messages_key="history",
-        )
-        generation = with_message_history.invoke({"messages": human_messages, "name": name},
-                                                 config={"configurable": {"session_id": session_id}})
-        # self.audio.streamed_audio(generation)
+            [To_Loan_tool_1])
+        # with_message_history = RunnableWithMessageHistory(
+        #    primary_assitant_runnable,
+        #    lambda session_id: SQLChatMessageHistory(
+        #        session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
+        #    ),
+        #    input_messages_key="messages",
+        #    history_messages_key="history",
+        # )
+        generation = primary_assitant_runnable.invoke({"human_messages": human_messages, "name": name},
+                                                      config={"configurable": {"session_id": session_id}})
+       # self.audio.streamed_audio(generation.content)
         return {
             "messages": generation
         }
 
     def tool_runnable(self, state):
         session_id = state['session_id']
-        human_messages = state['messages']
+        human_messages = state['human_messages']
         name = state['name']
         llm = ChatOpenAI(model='gpt-3.5-turbo')
+        system = """You are a specialized assistant for calculating loan amount of a customer 
+                 The primary assistant delegates work to you whenever the user needs help with calculating loan amount
+                  When searching, be persistent. Expand your query bounds if the first search returns no results. 
+                 Once you have calculated laon amount delgate back to  main assistant.
+                  Remember that a loan amount  isn't completed until after the relevant tool has successfully been used.
+                  then "CompleteOrEscalate" the dialog to the host assistant.
+                  Do not waste the user's time. Do not make up invalid tools or functions.
+                 You dont need first name of the customer that's it
+                  then end the conversation by say such word as bye 
+                 You just need first name to calculate the loan amount 
+                 Name of the customer is {name}
+                 \n\nSome examples for which you should CompleteOrEscalate:\n"
+                  - 'Loan amount calcualted ',
+                 tell him this will be the loan amount the user have pay for this month"""
+        human = "here is the human reply \n\n{human_messages},here is the name of the customer  {name}"
         # llm = ChatOpenAI(model='gpt-4o')#
         # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
         loan_hotel_prompt = ChatPromptTemplate.from_messages(
             [
-                ("system",
-                 "You are a specialized assistant for calculating loan amount of a customer "
-                 "The primary assistant delegates work to you whenever the user needs help with calculating loan amount"
-                 " When searching, be persistent. Expand your query bounds if the first search returns no results. "
-                 "Once you have calculated laon amount delgate back to  main assistant."
-                 " Remember that a loan amount  isn't completed until after the relevant tool has successfully been used."
-                 ' then "CompleteOrEscalate" the dialog to the host assistant.'
-                 " Do not waste the user's time. Do not make up invalid tools or functions."
-                 "You dont need first name of the customer that's it"
-                 " then end the conversation by say such word as bye "
-                 "You just need first name to calculate the loan amount "
-                 "Name of the customer is {name}"
-                 "\n\nSome examples for which you should CompleteOrEscalate:\n"
-                 " - 'Loan amount calcualted '",
-                 ),
-                MessagesPlaceholder(variable_name="history"),
-                ("human", "here is the human reply \n\n{messages},here is the name of the customer  {name}")
+                ("system", system),
+                # MessagesPlaceholder(variable_name="history"),
+                ("human", human)
             ]
         )
         tool_1 = [monthly_payment]
-        loan_tool_runnable = loan_hotel_prompt | llm.bind_tools(tool_1 + [CompleteOrEscalate]) | StrOutputParser()
-        with_message_history = RunnableWithMessageHistory(
-            loan_tool_runnable,
-            lambda session_id: SQLChatMessageHistory(
-                session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
-            ),
-            input_messages_key="messages",
-            history_messages_key="history",
-        )
-        generation = with_message_history.invoke({"messages": human_messages, "name": name},
-                                                 config={"configurable": {"session_id": session_id}})
-        #self.audio.streamed_audio(generation)
+        loan_tool_runnable = loan_hotel_prompt | llm.bind_tools(tool_1 + [CompleteOrEscalate])
+        # with_message_history = RunnableWithMessageHistory(
+        #    loan_tool_runnable,
+        #    lambda session_id: SQLChatMessageHistory(
+        #        session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
+        #    ),
+        #    input_messages_key="messages",
+        #    history_messages_key="history",
+        # )
+        generation = loan_tool_runnable.invoke({"human_messages": human_messages, "name": name})
+        # config={"configurable": {"session_id": session_id}})
+        self.audio.streamed_audio(generation.content)
         return {
             "messages": generation,
         }
@@ -246,7 +237,7 @@ class Nodes():
                     ToolMessage(
                         content=f"The assistant is now the {assistant_name}. Reflect on the above conversation between the host assistant and the user."
                                 f" The user's intent is unsatisfied. Use the provided tools to assist the user. Remember, you are {assistant_name},"
-                                " and the booking, update, other other action is not complete until after you have successfully invoked the appropriate tool."
+                                " remember to  invoked the appropriate tool for calculating loan adjustment"
                                 " If the user changes their mind or needs help for other tasks, call the CompleteOrEscalate function to let the primary host assistant take control."
                                 " Do not mention who you are - just act as the proxy for the assistant.",
                         tool_call_id=tool_call_id,

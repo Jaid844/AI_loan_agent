@@ -21,6 +21,7 @@ class State(TypedDict):
         keys: A dictionary where each key is a string.
     """
     messages: Annotated[list[AnyMessage], add_messages]
+    human_messages: list[HumanMessage]
     profile: List[str]
     session_id:str
     name: str
