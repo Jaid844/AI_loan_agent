@@ -22,15 +22,14 @@ config = {
     "configurable": {
         # Checkpoints are accessed by thread_id
         "thread_id": "4",
-        "name": "James",
 
     }
 }
 
-qn = ["Hi what is this call about",
+qn = [
       "Yeah I would like a loan adjustment"]
 for question in qn:
-    for output in app.stream({"human_messages": question, "session_id": "6"}, config, ):
+    for output in app.stream({"messages": question, "session_id": "6=","name":"James"}, config, ):
         for key, value in output.items():
             # Node
             pprint(f"Node '{key}':")
