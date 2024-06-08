@@ -6,10 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="64583063-63fb-478e-8f6e-c03751244612" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/history_of_conversation.db" beforeDir="false" afterPath="$PROJECT_DIR$/src/history_of_conversation.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rough.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/rough.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/graph.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nodes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/state.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tools.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,7 +46,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/91639/Desktop/Loan Agents/loan_work/src/main.py&quot;
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/91639/Desktop/new_assitant&quot;
   }
 }</component>
   <component name="RunManager" selected="Python.main">
@@ -143,15 +145,15 @@
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/main.py</url>
-          <line>28</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/nodes.py</url>
-          <line>179</line>
-          <option name="timeStamp" value="16" />
+          <line>268</line>
+          <option name="timeStamp" value="21" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/.conda/envs/UI_langchain_bot/Lib/site-packages/langgraph/prebuilt/tool_node.py</url>
+          <line>38</line>
+          <option name="timeStamp" value="24" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

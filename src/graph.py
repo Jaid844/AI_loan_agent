@@ -4,10 +4,13 @@ from state import State
 from nodes import *
 from tools import *
 from langgraph.checkpoint.memory import MemorySaver
-tools = [monthly_payment]
+
+cal_tools = [monthly_payment]
 
 memory = MemorySaver()
-class WorkFlow():
+
+
+class WorkFlow:
     def __init__(self):
         nodes = Nodes()
         workflow = StateGraph(State)
@@ -16,11 +19,19 @@ class WorkFlow():
         workflow.set_entry_point("primary_assistant")
         workflow.add_node("primary_assistant", nodes.primary_assistant)
         workflow.add_node("enter_loan_tool", nodes.create_entry_node("Loan_calculator_assistant", "update_loan"))
-        workflow.add_node("update_loan", nodes.tool_runnable)
+        workflow.add_node("update_loan", Assistant(nodes.tool_runnable()))
         workflow.add_edge("enter_loan_tool", "update_loan")
-        workflow.add_node("tool_use", nodes.create_tool_node_with_fallback(tools))
+        workflow.add_node("tool_use", create_tool_node_with_fallback(cal_tools))
         workflow.add_edge("tool_use", "update_loan")
-        workflow.add_conditional_edges("update_loan", route_to_tool)
+        workflow.add_conditional_edges(
+            "update_loan",
+            route_to_tool,
+            {
+                "leave_skill": "leave_skill",
+                END: END,
+                "tool_use": "tool_use"
+            }
+        )
         workflow.add_node("leave_skill", pop_dialog_state)
         workflow.add_edge("leave_skill", "primary_assistant")
         workflow.add_conditional_edges(

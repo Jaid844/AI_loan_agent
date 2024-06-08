@@ -21,19 +21,18 @@ _printed = set()
 config = {
     "configurable": {
         # Checkpoints are accessed by thread_id
-        "thread_id": "4",
+        "thread_id": "5",
 
     }
 }
+_printed = set()
 
 qn = [
-      "the reason i didnt pay for this month is i am unemployed",
-"Yeah I would like a loan adjustment,"]
+    "the reason i didnt pay for this month is because i am unemployed",
+    "Yeah I would like a loan adjustment,"]
 for question in qn:
-    for output in app.stream({"human_messages": question, "session_id": "p","name":"James"}, config):
-        for key, value in output.items():
-            # Node
-            pprint(f"Node '{key}':")
-            # Optional: print full state at each node
-            # pprint.pprint(value["keys"], indent=2, width=80, depth=None)
-        pprint("\n---\n")
+    events = app.stream(
+        {"messages": ("user", question), "name": "James"}, config, stream_mode="values"
+    )
+    for event in events:
+        _print_event(event, _printed)

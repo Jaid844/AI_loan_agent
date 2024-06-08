@@ -1,6 +1,6 @@
 import os
 from typing import Callable
-
+from langgraph.prebuilt import ToolExecutor
 from langchain_community.chat_message_histories.sql import SQLChatMessageHistory
 from langchain_core.messages import HumanMessage
 from typing import Literal
@@ -96,13 +96,12 @@ class Assistant:
 
     def __init__(self, runnable: Runnable):
         self.runnable = runnable
-        self.audio = audio_node()
 
     def __call__(self, state: State, config: RunnableConfig):
         while True:
             result = self.runnable.invoke(state)  # the input are converted into dictionary key value pair
 
-            self.audio.streamed_audio(result.content)
+            # self.audio.streamed_audio(result.content)
 
             if not result.tool_calls and (
                     not result.content
@@ -141,7 +140,7 @@ class Nodes():
         }
 
     def primary_assistant(self, state):
-        human_messages = state['human_messages']
+        messages = state['messages']
         name = state['name']
         session_id = state['session_id']
         system = """You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has 
@@ -150,47 +149,29 @@ class Nodes():
                  Your primary role is to help customer to find reason why didn't he paid the loan this month                
                  You will try to do loan adjustments ,for that you only need the first name,
                 You cannot calculate the loan adjustment ,there is seprate assistant that will be able to calculate the
-                loan adjustment for you,delegate this task to another agent quietly,The user does not need to know 
-                 
+                loan adjustment for you,delegate this task to another agent quietly,The user does not need to know                
                 """
-        human = """ \n\nHere is the user response -- {human_messages}
-        \n\n Here is the name of the customer {name}
-                 """
+
         primary_assitant_prompt = ChatPromptTemplate.from_messages(
             [("system", system),
-             # MessagesPlaceholder(variable_name="history"),
-             ("human", human)]
+             ("placeholder", "{messages}")]
         )
-        # llm = ChatOpenAI(model='gpt-4o')
-        llm = ChatOpenAI(model='gpt-3.5-turbo')
-        # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
-        # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+        llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(
             [To_Loan_tool_1])
-        # with_message_history = RunnableWithMessageHistory(
-        #    primary_assitant_runnable,
-        #    lambda session_id: SQLChatMessageHistory(
-        #        session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
-        #    ),
-        #    input_messages_key="messages",
-        #    history_messages_key="history",
-        # )
-        generation = primary_assitant_runnable.invoke({"human_messages": human_messages, "name": name},
+
+        generation = primary_assitant_runnable.invoke({"messages": messages, "name": name},
                                                       config={"configurable": {"session_id": session_id}})
-       # self.audio.streamed_audio(generation.content)
         return {
             "messages": generation
         }
 
-    def tool_runnable(self, state):
-        session_id = state['session_id']
-        human_messages = state['human_messages']
-        name = state['name']
-        llm = ChatOpenAI(model='gpt-3.5-turbo')
+    def tool_runnable(self):
+        # llm = ChatOpenAI(model='gpt-3.5-turbo-0125')
         system = """You are a specialized assistant for calculating loan amount of a customer 
                  The primary assistant delegates work to you whenever the user needs help with calculating loan amount
                   When searching, be persistent. Expand your query bounds if the first search returns no results. 
-                 Once you have calculated laon amount delgate back to  main assistant.
+                 Once you have calculated loan amount delgate back to  main assistant.
                   Remember that a loan amount  isn't completed until after the relevant tool has successfully been used.
                   then "CompleteOrEscalate" the dialog to the host assistant.
                   Do not waste the user's time. Do not make up invalid tools or functions.
@@ -198,36 +179,21 @@ class Nodes():
                   then end the conversation by say such word as bye 
                  You just need first name to calculate the loan amount 
                  Name of the customer is {name}
+                 The loan tool will tell how much amount will the customer will pay this month
                  \n\nSome examples for which you should CompleteOrEscalate:\n"
                   - 'Loan amount calcualted ',
                  tell him this will be the loan amount the user have pay for this month"""
-        human = "here is the human reply \n\n{human_messages},here is the name of the customer  {name}"
-        # llm = ChatOpenAI(model='gpt-4o')#
-        # llm = ChatGroq(model="llama3-8b-8192", temperature=0)
-        # llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+
+        llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         loan_hotel_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
-                # MessagesPlaceholder(variable_name="history"),
-                ("human", human)
+                ("placeholder", "{messages}")
             ]
         )
         tool_1 = [monthly_payment]
         loan_tool_runnable = loan_hotel_prompt | llm.bind_tools(tool_1 + [CompleteOrEscalate])
-        # with_message_history = RunnableWithMessageHistory(
-        #    loan_tool_runnable,
-        #    lambda session_id: SQLChatMessageHistory(
-        #        session_id=session_id, connection_string="sqlite:///history_of_conversation.db"
-        #    ),
-        #    input_messages_key="messages",
-        #    history_messages_key="history",
-        # )
-        generation = loan_tool_runnable.invoke({"human_messages": human_messages, "name": name})
-        # config={"configurable": {"session_id": session_id}})
-        self.audio.streamed_audio(generation.content)
-        return {
-            "messages": generation,
-        }
+        return loan_tool_runnable
 
     def create_entry_node(self, assistant_name: str, new_dialog_state: str) -> Callable:
         def entry_node(state: State) -> dict:
@@ -248,24 +214,6 @@ class Nodes():
 
         return entry_node
 
-    def handle_tool_error(self, state) -> dict:
-        error = state.get("error")
-        tool_calls = state["messages"][-1].tool_calls
-        return {
-            "messages": [
-                ToolMessage(
-                    content=f"Error: {repr(error)}\n please fix your mistakes.",
-                    tool_call_id=tc["id"],
-                )
-                for tc in tool_calls
-            ]
-        }
-
-    def create_tool_node_with_fallback(self, tools: list) -> dict:
-        return ToolNode(tools).with_fallbacks(
-            [RunnableLambda(self.handle_tool_error)], exception_key="error"
-        )
-
 
 def route_to_tool(
         state: State,
@@ -281,8 +229,8 @@ def route_to_tool(
     did_cancel = any(tc["name"] == CompleteOrEscalate.__name__ for tc in tool_calls)
     if did_cancel:
         return "leave_skill"
-    safe_toolnames = [t.name for t in tools]
-    if all(tc["name"] in safe_toolnames for tc in tool_calls):
+    tool_names = [t.name for t in tools]
+    if all(tc["name"] in tool_names for tc in tool_calls):
         return "tool_use"
 
 
@@ -335,3 +283,23 @@ def route_to_workflow(
     if not dialog_state:
         return "primary_assistant"
     return dialog_state[-1]
+
+
+def handle_tool_error(state) -> dict:
+    error = state.get("error")
+    tool_calls = state["messages"][-1].tool_calls
+    return {
+        "messages": [
+            ToolMessage(
+                content=f"Error: {repr(error)}\n please fix your mistakes.",
+                tool_call_id=tc["id"],
+            )
+            for tc in tool_calls
+        ]
+    }
+
+
+def create_tool_node_with_fallback(tool):
+    return ToolNode(tool).with_fallbacks(
+        [RunnableLambda(handle_tool_error)], exception_key="error"
+    )
