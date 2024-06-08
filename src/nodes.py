@@ -101,7 +101,7 @@ class Assistant:
         while True:
             result = self.runnable.invoke(state)  # the input are converted into dictionary key value pair
 
-            # self.audio.streamed_audio(result.content)
+
 
             if not result.tool_calls and (
                     not result.content
@@ -140,34 +140,42 @@ class Nodes():
         }
 
     def primary_assistant(self, state):
+        llm = ChatOpenAI(model='gpt-3.5-turbo-0125')
         messages = state['messages']
         name = state['name']
         session_id = state['session_id']
         system = """You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has 
                   a good payment history
                   This is going to be a telephonic call so play along have a small conversation
+                  The reason for this call is to find why didnt he paid this month portion
+                  ,and you will calculate the loan amount
                  Your primary role is to help customer to find reason why didn't he paid the loan this month                
                  You will try to do loan adjustments ,for that you only need the first name,
                 You cannot calculate the loan adjustment ,there is seprate assistant that will be able to calculate the
-                loan adjustment for you,delegate this task to another agent quietly,The user does not need to know                
+                loan adjustment for you,delegate this task to another agent quietly,The user does not need to know    
+                Here is the name of the customer {name}            
                 """
 
         primary_assitant_prompt = ChatPromptTemplate.from_messages(
             [("system", system),
              ("placeholder", "{messages}")]
         )
-        llm = ChatGroq(model="llama3-70b-8192", temperature=0)
+        # llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         primary_assitant_runnable = primary_assitant_prompt | llm.bind_tools(
             [To_Loan_tool_1])
 
         generation = primary_assitant_runnable.invoke({"messages": messages, "name": name},
                                                       config={"configurable": {"session_id": session_id}})
+        if generation.tool_calls:
+            pass
+        else:
+            self.audio.streamed_audio(generation.content)
         return {
             "messages": generation
         }
 
     def tool_runnable(self):
-        # llm = ChatOpenAI(model='gpt-3.5-turbo-0125')
+        llm = ChatOpenAI(model='gpt-3.5-turbo-0125')
         system = """You are a specialized assistant for calculating loan amount of a customer 
                  The primary assistant delegates work to you whenever the user needs help with calculating loan amount
                   When searching, be persistent. Expand your query bounds if the first search returns no results. 
@@ -184,7 +192,7 @@ class Nodes():
                   - 'Loan amount calcualted ',
                  tell him this will be the loan amount the user have pay for this month"""
 
-        llm = ChatGroq(model="llama3-70b-8192", temperature=0)
+        # llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         loan_hotel_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
@@ -268,8 +276,6 @@ def route_primary_assistant(
     if tool_calls:
         if tool_calls[0]["name"] == To_Loan_tool_1.__name__:
             return "enter_loan_tool"
-        elif tool_calls[0]["name"] == End_of_conversation.__name__:
-            return END
     raise ValueError("Invalid route")
 
 

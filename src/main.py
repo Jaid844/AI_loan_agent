@@ -28,8 +28,10 @@ config = {
 _printed = set()
 
 qn = [
-    "the reason i didnt pay for this month is because i am unemployed",
-    "Yeah I would like a loan adjustment,"]
+    "hi",
+"how are you today",
+"i would like a loan adjustment",
+"I was unemployed"]
 for question in qn:
     events = app.stream(
         {"messages": ("user", question), "name": "James"}, config, stream_mode="values"
