@@ -21,17 +21,16 @@ _printed = set()
 config = {
     "configurable": {
         # Checkpoints are accessed by thread_id
-        "thread_id": "5",
+        "thread_id": "29-",
 
     }
 }
 _printed = set()
 
 qn = [
-    "hi",
-"how are you today",
-"i would like a loan adjustment",
-"I was unemployed"]
+"yeah a loan adjustment would be great",
+    "No the loan adjustment seem to step for me",
+]
 for question in qn:
     events = app.stream(
         {"messages": ("user", question), "name": "James"}, config, stream_mode="values"
