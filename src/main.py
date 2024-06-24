@@ -18,10 +18,15 @@ app = WorkFlow().app
 thread_id = str(uuid.uuid4())
 _printed = set()
 
+
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = "Loan Agent adjustment debug"
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 config = {
     "configurable": {
         # Checkpoints are accessed by thread_id
-        "thread_id": "29-",
+        "thread_id": "2ep-",
 
     }
 }
@@ -29,11 +34,12 @@ _printed = set()
 
 qn = [
 "yeah a loan adjustment would be great",
-    "No the loan adjustment seem to step for me",
+"seems good to me",
+"Still the adjustment seem to be more steep"
 ]
 for question in qn:
     events = app.stream(
-        {"messages": ("user", question), "name": "James"}, config, stream_mode="values"
+        {"messages": ("user", question), "name": "Albert Einstein"}, config, stream_mode="values"
     )
     for event in events:
         _print_event(event, _printed)

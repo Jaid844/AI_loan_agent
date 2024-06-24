@@ -1,14 +1,5 @@
-import os
 from typing import Callable, Union
-
-from langchain_chroma import Chroma
-from langchain_core.example_selectors import SemanticSimilarityExampleSelector
-from langgraph.prebuilt import ToolExecutor
-from langchain_community.chat_message_histories.sql import SQLChatMessageHistory
-from langchain_core.messages import HumanMessage
 from typing import Literal
-
-from langchain_core.runnables.history import RunnableWithMessageHistory
 from langgraph.graph import END
 from langchain_core.messages import ToolMessage
 from langchain_core.output_parsers import StrOutputParser
@@ -29,10 +20,6 @@ embeddings = VoyageAIEmbeddings(
 )
 tools = [monthly_payment]
 
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = "Loan Agent adjustment"
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-
 
 class CompleteOrEscalate(BaseModel):
     """A tool to mark the current task as completed and/or to escalate control of the dialog to the main assistant,
@@ -50,9 +37,6 @@ class CompleteOrEscalate(BaseModel):
 Would you like to proceed with this amount, James?""",
             },
             "example 3": {
-                "reason": "I need to search the user's emails or calendar for more information.",
-            },
-            "example 4": {
 
                 "reason": "I have fully calculated the loan amount", }
         }
@@ -76,16 +60,13 @@ class loan_amount_10(BaseModel):
     name: str = Field(
         description="The name of the customer "
     )
-    dialogue: str = Field(
-        description="The conversion of the customer if he agrees to pay some portion of the loan amount"
-    )
 
 
 class To_Loan_tool_1(BaseModel):
     """
-    If user agrees to pay some portion of the loan this ,This agent will help to calculate loan amount
-    If user feels difficult with the presented loan amount ,this function still can be used to calculate
-    the new loan amount with new rate
+    This function will be able to calculate the loan amount for the customer ,Initially the rate will be 5 %
+    but if the customer is felling a bit steep pay,A 10 % rate will be calculated
+
 
       """
 
@@ -96,12 +77,12 @@ class To_Loan_tool_1(BaseModel):
             "example 1": {
                 "rate": 5,
                 "name": "jake",
-                "dialogue": "Yes I would like a loan adjustment",
+                "dialogue": "I would like a loan adjustment",
             },
             "example 2": {
                 "rate": 10,
                 "name": "shela",
-                "dialogue": "The loan adjusment is too steep for me",
+                "dialogue": "The loan adjustment is too steep for me",
             }
         }
 
@@ -122,8 +103,7 @@ class Assistant:
             ):
                 messages = state["messages"] + [("user", "Respond with a real output.")]
                 state = {**state, "messages": messages}
-                messages = state["messages"] + [("user", "Respond with a real output.")]
-                state = {**state, "messages": messages}
+
             else:
                 break
         return {"messages": result}
@@ -134,10 +114,8 @@ class Nodes():
         self.audio = audio_node()
 
     def customer_profile_summarizer(self, state):
-        config = ensure_config()  # Fetch from the context
-        configuration = config.get("configurable", {})
-        name = configuration.get("name", None)
-        documents = loan_embeing_model().get_relevant_documents(name)
+        name = state['name']
+        documents = loan_embedding_model().get_relevant_documents(name)
         llm = ChatGroq(model="llama3-8b-8192", temperature=0)
         prompt = PromptTemplate(
             template=""" Summarize the profile of the customer below ,summarize the how he is with loan payment,financial circumstance
@@ -153,24 +131,23 @@ class Nodes():
 
     def primary_assistant(self, state):
         llm = ChatOpenAI(model='gpt-3.5-turbo')
+        # llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         messages = state['messages']
         name = state['name']
         session_id = state['session_id']
         system = """"You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has 
                   a good payment history
                   This is going to be a telephonic call so play along have a small conversation
-                  The reason for this call is to find why didn't he paid this month portion
-                  ,and you will calculate the loan amount
-                 Your primary role is to help customer to find reason why didn't he paid the loan this month                
-                 You will try to do loan adjustments ,for that you only need the first name,
-                You cannot calculate the loan adjustment ,there is separate assistant that will be able to calculate the
-                loan adjustment for you,delegate this task to another agent quietly,The user does not need to know    
-                Remember to tell the user they will get 5% discount in their loan amount ,if they agree then that will
-                be their loan amount ,if they disagree offer them 10 % discount in their loan amount only if they 
-                disagree in 5 % loan amount calculation
-                
+                  
                 Here is the name of the customer {name}                 
                 You are given set of example so you can reference from it
+                "INSTRUCTIONS
+                -GREET THEM WITH HELLOW AND ASK THEM WHY DID THEY PAID THIS MONTH PAYMENT
+                -ASK THEM IF THEM WILLING TO PAY SOME PORTION OF THE LOAN AMOUNT 
+                -AT FIRST INITIALLY YOU WILL GIVE THEM 5 % DISCOUNT IN THEIR OUTSTANDING LOAN AMOUNT
+                -IF THEY HESITATE FOR 5 % LOAN AMOUNT ,YOU PROVIDE THEM WITH 10 % DISCOUNT RATE BECAUSE THEY ARE GOOD 
+                PAYING CUSTOMER BUT REMEMBER THIS IS THE LAST RATE THEY GET ,NOT BEYOND 10%
+
                 """
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -248,38 +225,96 @@ class Nodes():
         if generation.tool_calls:
             pass
         else:
-            self.audio.streamed_audio(generation.content)
+            # self.audio.streamed_audio(generation.content)
+            pass
         return {
             "messages": generation
         }
 
-    def tool_runnable(self):
-        llm = ChatOpenAI(model='gpt-4-1106-preview')
-        system = """You are a specialized assistant for calculating loan amount of a customer 
-                 The primary assistant delegates work to you whenever the user needs help with calculating loan amount
-                  When searching, be persistent. Expand your query bounds if the first search returns no results. 
-                 Once you have calculated loan amount delegate back to  main assistant.
-                  Remember that a loan amount  isn't completed until after the relevant tool has successfully been used.
-                  then "CompleteOrEscalate" the dialog to the host assistant.
-                  Do not waste the user's time. Do not make up invalid tools or functions.
-                 You dont need first name of the customer that's it
-                  then end the conversation by say such word as bye 
-                 You just need first name to calculate the loan amount 
-                 Remember to tell the user they will get 5% discount in their loan amount ,if they agree then that will
-                be their loan amount ,if they disagree offer them 10 % discount in their loan amount only if they 
-                disagree in 5 % loan amount calculation
-                 Name of the customer is {name}
-                 The loan tool will tell how much amount will the customer will pay this month
-                 If you have calculated the loan amount then use  CompleteOrEscalate
-                 \n\nSome examples for which you should CompleteOrEscalate:\n"
-                  - 'Loan amount calculated ',
-                  -The loan amount for this month will be $16.67 for {name}
-                 tell him this will be the loan amount the user have pay for this month"""
+    def Bad_Profile_Chain(self, state):
+        profile = state['Profile']
+        messages = state['messages']
+        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        system = """
+        You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a bad payment history of payments
+        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
+         can he pay some amount if the conversation is not good ,give him the warning the bank might take some legal action against him
+        This is a telephonic call so make a call ,talk in a that manner in small and precise manner
+        After making the call/concluding the conversation just say Goodbye 
 
+        """
+        human = """Make sure you dont repeat yourself during the conversation.
+            Here is the customer profile {profile} \n\n Here is the user response \n\n ---{userquery}"""
+        final_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", human),
+            ]
+        )
+        rag_chain = final_prompt | llm | StrOutputParser()
+        generation = rag_chain.invoke({"profile": profile, "userquery": messages})
+        self.audio.streamed_audio(generation)
+        return {
+            "generation": generation,
+        }
+    def grade_profile(self, state):
+        print("----CHECKING THE IF THE PROFILE IS GOOD OR BAD")
+        Profile = state['Profile']
+
+        class GradeConclusion(BaseModel):
+            """Binary score for profile to see if the profile is good profile or the bad profile
+            """
+
+            binary_score: str = Field(
+                description="Profile if they are good or bad based on credit history, 'Good' or 'Bad'")
+
+        llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+        structured_llm_grader = llm.with_structured_output(GradeConclusion)
+        system = """You are a grader assessing the profiles of customer your job is to see if the credit score of the customer are good 
+              or bad ,Grade 'Good' if the profile is Good ,or grade it Bad if the profile of the customer is 'Bad'
+                          """
+        grade_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", "Customer Profile: {profile}"),
+            ]
+        )
+        customer_profile_grader = grade_prompt | structured_llm_grader
+
+        score = customer_profile_grader.invoke({"profile": Profile})
+        if score.binary_score == "Good":
+            return "primary_assistant"
+        else:
+            return "bad_profile"
+
+    def tool_runnable(self):
+        llm = ChatOpenAI(model='gpt-3.5-turbo')
         # llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         loan_hotel_prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", system),
+                ("system",
+                 " You are a specialized assistant for calculating loan amount of a customer "
+                 " The primary assistant delegates work to you whenever the user needs help with calculating loan amount"
+                 "  When searching, be persistent. Expand your query bounds if the first search returns no results. "
+                 " Once you have calculated loan amount delegate back to  main assistant."
+                 "  Remember that a loan amount  isn't completed until after the relevant tool has successfully been used."
+                 "  then CompleteOrEscalate the dialog to the host assistant."
+                 "  Do not waste the user's time. Do not make up invalid tools or functions."
+                 " You dont need first name of the customer that's it"
+                 "  then end the conversation by say such word as bye "
+                 " You just need first name to calculate the loan amount "
+                 " Remember to tell the user they will get 5% discount in their loan amount ,if they agree then that will"
+                 "be their loan amount ,if they disagree offer them 10 % discount in their loan amount only if they "
+                 "disagree in 5 % loan amount calculation"
+                 "Only 5% and 10% loan adjustment is possible beyond that not possible"
+                 " Name of the customer is {name}"
+                 " The loan tool will tell how much amount will the customer will pay this month"
+                 " If you have calculated the loan amount then use  CompleteOrEscalate function call /tool"
+                 " \n\nSome examples for which you should CompleteOrEscalate:\n"""
+                 "  - 'Loan amount calculated ',"
+                 " - I have calculated the initial discounted loan amount for you, James. It would be $316.66."
+                 " If you need any further assistance or have any other questions, feel free to let me know."
+                 ),
                 ("placeholder", "{messages}")
             ]
         )
