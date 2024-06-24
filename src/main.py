@@ -39,7 +39,7 @@ qn = [
 ]
 for question in qn:
     events = app.stream(
-        {"messages": ("user", question), "name": "Albert Einstein"}, config, stream_mode="values"
+        {"messages": ("user", question), "name": "James"}, config, stream_mode="values"
     )
     for event in events:
         _print_event(event, _printed)

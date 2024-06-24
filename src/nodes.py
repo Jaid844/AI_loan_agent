@@ -232,35 +232,37 @@ class Nodes():
         }
 
     def Bad_Profile_Chain(self, state):
-        profile = state['Profile']
+        name=state['name']
+        profile = state['profile']
         messages = state['messages']
-        llm = ChatGroq(model="llama3-8b-8192", temperature=0)
+        llm = ChatOpenAI(model="gpt-3.5-turbo")
         system = """
         You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a bad payment history of payments
         ,Might have some financal issue can you ask this person ,why didnt he paid this month,
          can he pay some amount if the conversation is not good ,give him the warning the bank might take some legal action against him
-        This is a telephonic call so make a call ,talk in a that manner in small and precise manner
-        After making the call/concluding the conversation just say Goodbye 
+         name  of the customer {name}
+        INSTRUCTIONS
+                -GREET THEM WITH HELLOW AND ASK THEM WHY DID THEY PAID THIS MONTH PAYMENT
+                -ASK THEM WHY DIDNT THEY PAID THE LOAN AMOUNT THIS MONTH
+                -IF THEY SLACK OR MISCOMMUNICATION  THREATEN WITH LAWSUIT
+
 
         """
-        human = """Make sure you dont repeat yourself during the conversation.
-            Here is the customer profile {profile} \n\n Here is the user response \n\n ---{userquery}"""
+
         final_prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
-                ("human", human),
+                ("placeholder", "{messages}"),
             ]
         )
-        rag_chain = final_prompt | llm | StrOutputParser()
-        generation = rag_chain.invoke({"profile": profile, "userquery": messages})
+        rag_chain = final_prompt | llm
+        generation = rag_chain.invoke({"messages": messages,"name":name})
         self.audio.streamed_audio(generation)
         return {
-            "generation": generation,
+            "messages": generation,
         }
     def grade_profile(self, state):
-        print("----CHECKING THE IF THE PROFILE IS GOOD OR BAD")
-        Profile = state['Profile']
-
+        profile = state['profile']
         class GradeConclusion(BaseModel):
             """Binary score for profile to see if the profile is good profile or the bad profile
             """
@@ -281,7 +283,7 @@ class Nodes():
         )
         customer_profile_grader = grade_prompt | structured_llm_grader
 
-        score = customer_profile_grader.invoke({"profile": Profile})
+        score = customer_profile_grader.invoke({"profile": profile})
         if score.binary_score == "Good":
             return "primary_assistant"
         else:

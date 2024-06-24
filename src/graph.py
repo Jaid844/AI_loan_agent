@@ -33,6 +33,7 @@ class WorkFlow:
                 "bad_profile": "bad_profile",
             },
         )
+        workflow.add_edge("bad_profile",END)
         workflow.add_conditional_edges(
             "update_loan",
             route_to_tool,
@@ -52,6 +53,6 @@ class WorkFlow:
                 END: END
             }
         )
-        workflow.add_conditional_edges("user_profile", route_to_workflow)
+        #workflow.add_conditional_edges("user_profile", route_to_workflow)
 
         self.app = workflow.compile(checkpointer=memory)
