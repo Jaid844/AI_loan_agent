@@ -9,7 +9,7 @@ app = WorkFlow().app
 config = {
     "configurable": {
         # Checkpoints are accessed by thread_id
-        "thread_id": "2-ALB-",
+        "thread_id": "2-ALB-e",
 
     }
 }
@@ -23,7 +23,7 @@ def predict_loan_agent_answer(example: dict):
     return {"response": messages['messages'][-1].content}
 
 
-dataset_name = "Loan agent response_albert"
+dataset_name = "Loan agent response_albert_bad_profile"
 # Grade prompt
 grade_prompt_answer_accuracy = prompt = hub.pull("langchain-ai/rag-answer-vs-reference")
 
@@ -55,13 +55,13 @@ def answer_evaluator(run, example) -> dict:
 
 from langsmith.evaluation import evaluate
 
-experiment_prefix = "loan_agent"
-metadata = "ABC bank"
+experiment_prefix = "loan_agent_bad_profile_for_albert"
+metadata = "ABC bank bad profile"
 experiment_results = evaluate(
     predict_loan_agent_answer,
     data=dataset_name,
     evaluators=[answer_evaluator],
     experiment_prefix=experiment_prefix + "-response-v-reference",
-    num_repetitions=3,
+    num_repetitions=1,
     metadata={"version": metadata})
 

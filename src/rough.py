@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 
 from pydantic import BaseModel, Discriminator, Field, Tag
 
-
+from importlib import util
 infinite_cycle = cycle([AIMessage(content="hello"), AIMessage(content="goodbye")])
 model = GenericFakeChatModel(messages=infinite_cycle)
 response = model.invoke("kitty")

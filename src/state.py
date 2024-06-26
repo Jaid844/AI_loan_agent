@@ -2,7 +2,6 @@ from typing import Annotated, Dict, TypedDict, Literal, Optional, Union, List
 from langgraph.graph.message import AnyMessage, add_messages
 
 
-
 def update_dialog_stack(left: list[str], right: Optional[str]) -> list[str]:
     """Push or pop the state."""
     if right is None:
@@ -21,7 +20,7 @@ class State(TypedDict):
     """
     messages: Annotated[list[AnyMessage], add_messages]
     name: str
-    profile:List[str]
+    profile: List[str]
     session_id: str
     dialog_state: Annotated[
         list[

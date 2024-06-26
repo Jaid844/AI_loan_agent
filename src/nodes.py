@@ -232,15 +232,14 @@ class Nodes():
         }
 
     def Bad_Profile_Chain(self, state):
-        name=state['name']
-        profile = state['profile']
+        name = state['name']
         messages = state['messages']
         llm = ChatOpenAI(model="gpt-3.5-turbo")
         system = """
-        You are loan agent called as Sandy from ABC bank here to disscuss the loan payment this customer has a bad payment history of payments
-        ,Might have some financal issue can you ask this person ,why didnt he paid this month,
-         can he pay some amount if the conversation is not good ,give him the warning the bank might take some legal action against him
-         name  of the customer {name}
+        you are a loan agent named Sandy from ABC bank ,here to talk to customer who have bad credit 
+        Find out the reason why didn't he paid this month due,If he is not willing cooperate,
+        tell him the bank will take legal action against him.Remember that you dont need to do any adjustment
+        here is the profile{name}
         INSTRUCTIONS
                 -GREET THEM WITH HELLOW AND ASK THEM WHY DID THEY PAID THIS MONTH PAYMENT
                 -ASK THEM WHY DIDNT THEY PAID THE LOAN AMOUNT THIS MONTH
@@ -256,13 +255,15 @@ class Nodes():
             ]
         )
         rag_chain = final_prompt | llm
-        generation = rag_chain.invoke({"messages": messages,"name":name})
-        self.audio.streamed_audio(generation)
+        generation = rag_chain.invoke({"messages": messages, "name": name})
+        # self.audio.streamed_audio(generation)
         return {
             "messages": generation,
         }
+
     def grade_profile(self, state):
         profile = state['profile']
+
         class GradeConclusion(BaseModel):
             """Binary score for profile to see if the profile is good profile or the bad profile
             """
