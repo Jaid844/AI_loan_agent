@@ -33,6 +33,7 @@ config = {
 _printed = set()
 
 qn = [
+"hellow",
 "yeah a loan adjustment would be great",
 "seems good to me",
 "Still the adjustment seem to be more steep"

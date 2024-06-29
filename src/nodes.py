@@ -19,7 +19,10 @@ embeddings = VoyageAIEmbeddings(
     model="voyage-2", batch_size=128, truncation=True
 )
 tools = [monthly_payment]
-
+import os
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = "Loan Agent adjustment"
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 class CompleteOrEscalate(BaseModel):
     """A tool to mark the current task as completed and/or to escalate control of the dialog to the main assistant,
@@ -29,15 +32,11 @@ class CompleteOrEscalate(BaseModel):
 
     class Config:
         schema_extra = {
-            "example": {
-                "reason": "User changed their mind about the current task.",
-            },
-            "example 2": {
+            "example 1": {
                 "reason": """The calculated loan amount for this month, after applying a 5% discount, is $16.67. 
 Would you like to proceed with this amount, James?""",
             },
-            "example 3": {
-
+            "example 2": {
                 "reason": "I have fully calculated the loan amount", }
         }
 
@@ -137,83 +136,22 @@ class Nodes():
         session_id = state['session_id']
         system = """"You are loan agent called as Sandy from ABC bank here to discuss the loan payment this customer has 
                   a good payment history
-                  This is going to be a telephonic call so play along have a small conversation
-                  
+                  This is going to be a telephonic call so play along have a small conversation                 
                 Here is the name of the customer {name}                 
                 You are given set of example so you can reference from it
                 "INSTRUCTIONS
-                -GREET THEM WITH HELLOW AND ASK THEM WHY DID THEY PAID THIS MONTH PAYMENT
+                -GREET THEM WITH HELLOW AND ASK THEM THE REASON  WHY DID NOT THEY PAID THIS MONTH PAYMENT
+                -Keep the conversation quite and small
                 -ASK THEM IF THEM WILLING TO PAY SOME PORTION OF THE LOAN AMOUNT 
-                -AT FIRST INITIALLY YOU WILL GIVE THEM 5 % DISCOUNT IN THEIR OUTSTANDING LOAN AMOUNT
+                -WHILE CALCULATING THE LOAN AMOUNT TELL THEM TO HOLD FOR A MINUTE SO THAT YOU CAN CALCULATE THE NEW 
+                DISCOUNTED LOAN AMOUNT
+                -AT FIRST INITIALLY YOU WILL GIVE THEM 5 % DISCOUNT IN THEIR OUTSTANDING LOAN AMOUNT TELL THEM THIS THE 
+                AMOUNT THEY WILL PAY THIS MONTH FROM NOW
                 -IF THEY HESITATE FOR 5 % LOAN AMOUNT ,YOU PROVIDE THEM WITH 10 % DISCOUNT RATE BECAUSE THEY ARE GOOD 
                 PAYING CUSTOMER BUT REMEMBER THIS IS THE LAST RATE THEY GET ,NOT BEYOND 10%
-
                 """
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", "{system}"),
-                ("human", "{placeholder}"),
-            ]
-        )
-        examples = [
-            {
-                "system": "Good morning/afternoon, [Customer's Name]. This is Sandy calling from ABC bank. I hope you're doing well today.",
-                "placeholder": "Good morning/afternoon. Yes, thank you, I'm doing fine. How can I assist you?"
-            },
-            {
-                "system": "I'm calling today to discuss your recent loan payment. I noticed there's been a delay, which is unusual given your excellent payment history. I wanted to check in with you to ensure everything is alright on your end.",
-                "placeholder": "I appreciate your concern. Unfortunately, I encountered an unexpected issue with my finances this month that caused the delay in payment."
-            },
-            {
-                "system": "I understand, [Customer's Name]. Life can be unpredictable, and these things happen. Your consistent payment history hasn't gone unnoticed, and I'm here to assist you in any way I can. Would you like to discuss your situation further so we can find a suitable solution together?",
-                "placeholder": "Yes, please. I would appreciate any assistance you can offer."
-            },
-            {
-                "system": "Certainly. Let's review your current situation and explore some options to help you get back on track. We could consider adjusting your payment schedule, setting up a payment plan, or exploring other alternatives that best fit your circumstances. Does that sound like a good starting point for us?",
-                "placeholder": "Yes, that sounds reasonable."
-            },
-            {
-                "system": "Firstly, let's review your current financial situation together. This will help us understand the extent of the issue and determine the best course of action. Do you have a clear picture of your expenses and income for the upcoming months?",
-                "placeholder": "Yes, I have some rough estimates."
-            },
-            {
-                "system": "Excellent. Let's start by identifying any discretionary expenses that could be reduced or eliminated temporarily to free up funds for your loan payments. Additionally, if you have any assets or savings that could be used to cover the outstanding amount, now might be the time to consider utilizing them.",
-                "placeholder": "That makes sense. I'll take a closer look at my budget and see where I can make adjustments."
-            },
-            {
-                "system": "Perfect. Once you've identified potential areas for savings, we can discuss restructuring your payment plan. This could involve extending the loan term, adjusting the monthly installments, or exploring alternative payment arrangements that better align with your current financial situation.",
-                "placeholder": "Okay, I'll gather all the necessary information and get back to you with my proposed plan."
-            },
-            {
-                "system": "That sounds like a plan. In the meantime, if you have any questions or need further assistance, don't hesitate to reach out to me. I'm here to support you every step of the way.",
-                "placeholder": "Thank you so much for your help. I feel more confident about resolving this issue now."
-            },
-            {
-                "system": "You're very welcome, [Customer's Name]. Remember, we're a team, and together we'll find a solution that works for you. Take your time, and when you're ready, we'll discuss your proposed plan in detail.",
-                "placeholder": "I appreciate your support. I'll be in touch soon."
-            },
-            {
-                "system": "Before we end this call, I'd like to offer an additional option that might help. Given your excellent payment history, we can offer you a 10% discount on your monthly payments. This would reduce your payment from $400 to $360.",
-                "placeholder": "Really? That would be incredibly helpful. Thank you!"
-            },
-            {
-                "system": "You're welcome, [Customer's Name]. We'll send you the updated payment schedule and the details of your new monthly payment terms. If you have any further questions, feel free to contact me.",
-                "placeholder": "Thank you, Sandy. I'll look out for the updated information."
-            },
-            {
-                "system": "My pleasure. Have a great day, [Customer's Name].",
-                "placeholder": "You too. Goodbye."
-            }
-        ]
-
-        few_shot_prompt = FewShotChatMessagePromptTemplate(
-            input_variables=["messages"],
-            examples=examples,
-            example_prompt=prompt
-        )
         primary_assistant_prompt = ChatPromptTemplate.from_messages(
             [("system", system),
-             few_shot_prompt,
              ("placeholder", "{messages}")]
         )
         # llm = ChatGroq(model="llama3-70b-8192", temperature=0)
@@ -225,8 +163,8 @@ class Nodes():
         if generation.tool_calls:
             pass
         else:
-            # self.audio.streamed_audio(generation.content)
-            pass
+            self.audio.streamed_audio(generation.content)
+
         return {
             "messages": generation
         }
@@ -256,7 +194,7 @@ class Nodes():
         )
         rag_chain = final_prompt | llm
         generation = rag_chain.invoke({"messages": messages, "name": name})
-        # self.audio.streamed_audio(generation)
+        self.audio.streamed_audio(generation)
         return {
             "messages": generation,
         }
@@ -271,7 +209,7 @@ class Nodes():
             binary_score: str = Field(
                 description="Profile if they are good or bad based on credit history, 'Good' or 'Bad'")
 
-        llm = ChatGroq(model="mixtral-8x7b-32768", temperature=0)
+        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
         structured_llm_grader = llm.with_structured_output(GradeConclusion)
         system = """You are a grader assessing the profiles of customer your job is to see if the credit score of the customer are good 
               or bad ,Grade 'Good' if the profile is Good ,or grade it Bad if the profile of the customer is 'Bad'
@@ -314,9 +252,9 @@ class Nodes():
                  " The loan tool will tell how much amount will the customer will pay this month"
                  " If you have calculated the loan amount then use  CompleteOrEscalate function call /tool"
                  " \n\nSome examples for which you should CompleteOrEscalate:\n"""
-                 "  - 'Loan amount calculated ',"
-                 " - I have calculated the initial discounted loan amount for you, James. It would be $316.66."
-                 " If you need any further assistance or have any other questions, feel free to let me know."
+                 " - The total loan amount will be $316.66. for James "
+                 "- I HAVE FULLY CALCULATED THE LOAN AMOUNT"
+
                  ),
                 ("placeholder", "{messages}")
             ]
@@ -359,9 +297,7 @@ def route_to_tool(
     did_cancel = any(tc["name"] == CompleteOrEscalate.__name__ for tc in tool_calls)
     if did_cancel:
         return "leave_skill"
-    tool_names = [t.name for t in tools]
-    if all(tc["name"] in tool_names for tc in tool_calls):
-        return "tool_use"
+    return "tool_use"
 
 
 def pop_dialog_state(state: State) -> dict:
@@ -400,7 +336,7 @@ def route_primary_assistant(
             return "enter_loan_tool"
     raise ValueError("Invalid route")
 
-
+from langgraph.constants import Send
 def route_to_workflow(
         state: State,
 ) -> Literal[

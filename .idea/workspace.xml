@@ -5,14 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="64583063-63fb-478e-8f6e-c03751244612" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/langgraph.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rough.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/rough.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/src/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/audio.wav" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.wav" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nodes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rough.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/rough.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/state.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test_case.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/test_case.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/testingagents.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/testingagents.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tools.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,6 +23,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Python Script" />
+        <option value="Python Stub" />
       </list>
     </option>
   </component>
@@ -55,7 +56,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python tests.Unittests in src">
+  <component name="RunManager" selected="Python.rough">
     <configuration name="audio" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="loan_work" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -258,8 +259,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.testingagents" />
         <item itemvalue="Python.rough" />
+        <item itemvalue="Python.testingagents" />
         <item itemvalue="Python.tools" />
         <item itemvalue="Python.new_file" />
         <item itemvalue="Python.audio" />
@@ -282,7 +283,7 @@
       <breakpoints>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/nodes.py</url>
-          <line>398</line>
+          <line>334</line>
           <option name="timeStamp" value="21" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
