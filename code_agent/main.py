@@ -9,7 +9,7 @@ from pprint import pprint
 from audio_recorder_streamlit import audio_recorder
 import streamlit as st
 import soundfile as sf
-from src.tools import _print_event
+from code_agent.tools import _print_event
 from tools import *
 
 load_dotenv()

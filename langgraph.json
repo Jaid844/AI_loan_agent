@@ -1,7 +1,7 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "agent": "src/main:app"
+    "agent": "code_agent/main:app"
   },
 "env": ".env"
 }
