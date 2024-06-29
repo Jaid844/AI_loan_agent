@@ -4,16 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="64583063-63fb-478e-8f6e-c03751244612" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/langgraph.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/src/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/audio.wav" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.wav" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nodes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rough.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/rough.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/testingagents.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/testingagents.py" afterDir="false" />
-    </list>
+    <list default="true" id="64583063-63fb-478e-8f6e-c03751244612" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
