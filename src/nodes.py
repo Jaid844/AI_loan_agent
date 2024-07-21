@@ -114,7 +114,7 @@ class Nodes():
     def customer_profile_summarizer(self, state):
         name = state['name']
         documents = loan_embedding_model().get_relevant_documents(name)
-        llm = ChatOpenAI(model='gpt-3.5-turbo')
+        llm = ChatOpenAI(model='gpt-4o-mini')
         prompt = PromptTemplate(
             template=""" Summarize the profile of the customer below ,summarize the how he is with loan payment,financial circumstance
                   ,communication ,his credit worthiness  as detail as possilbe \n
@@ -128,7 +128,7 @@ class Nodes():
         }
 
     def primary_assistant(self, state):
-        llm = ChatOpenAI(model='gpt-3.5-turbo')
+        llm = ChatOpenAI(model='gpt-4o-mini')
         # llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         messages = state['messages']
         name = state['name']
@@ -138,8 +138,8 @@ class Nodes():
                   This is going to be a telephonic call so play along have a small conversation                 
                 Here is the name of the customer {name}                 
                 You are given set of example so you can reference from it
-                "INSTRUCTIONS
-                -GREET THEM WITH HELLOW AND ASK THEM THE REASON  WHY DID NOT THEY PAID THIS MONTH PAYMENT
+                "INSTRUCTIONS"
+                -"GREET THEM WITH HELLOW AND ASK THEM THE REASON  WHY DID NOT THEY PAID THIS MONTH PAYMENT"
                 -Keep the conversation quite and small
                 -ASK THEM IF THEM WILLING TO PAY SOME PORTION OF THE LOAN AMOUNT 
                 -WHILE CALCULATING THE LOAN AMOUNT TELL THEM TO HOLD FOR A MINUTE SO THAT YOU CAN CALCULATE THE NEW 
@@ -173,7 +173,7 @@ class Nodes():
     def Bad_Profile_Chain(self, state):
         name = state['name']
         messages = state['messages']
-        llm = ChatOpenAI(model="gpt-3.5-turbo")
+        llm = ChatOpenAI(model="gpt-4o-mini")
         system = """
         you are a loan agent named Sandy from ABC bank ,here to talk to customer who have bad credit 
         Find out the reason why didn't he paid this month due,If he is not willing cooperate,
@@ -230,7 +230,7 @@ class Nodes():
             return "bad_profile"
 
     def tool_runnable(self):
-        llm = ChatOpenAI(model='gpt-3.5-turbo')
+        llm = ChatOpenAI(model='gpt-4o-mini')
         # llm = ChatGroq(model="llama3-70b-8192", temperature=0)
         loan_hotel_prompt = ChatPromptTemplate.from_messages(
             [

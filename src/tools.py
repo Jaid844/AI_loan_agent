@@ -1,6 +1,9 @@
+import os
+
+import aiofiles
 import pandas as pd
 from dotenv import load_dotenv
-
+import asyncio
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_core.pydantic_v1 import BaseModel
 from langchain_core.tools import ToolException
@@ -8,10 +11,11 @@ from langchain.tools import tool
 from langchain_core.vectorstores import VectorStoreRetriever
 
 from langchain_voyageai import VoyageAIEmbeddings
+from openai import OpenAI
 from pydantic import Field
 
 load_dotenv()
-
+client = OpenAI()
 embeddings = VoyageAIEmbeddings(
     model="voyage-2", batch_size=128, truncation=True
 )
@@ -87,3 +91,33 @@ def _print_event(event: dict, _printed: set, max_length=1500):
                 msg_repr = msg_repr[:max_length] + " ... (truncated)"
             print(msg_repr)
             _printed.add(message.id)
+
+
+async def remove_audio(audiofile):
+    retries = 3
+    for attempt in range(retries):
+        try:
+            if os.path.exists(audiofile):
+                os.remove(audiofile)
+            break
+        except OSError as e:
+            if attempt < retries - 1:
+                await asyncio.sleep(1)  # Wait before retrying
+            else:
+                raise e
+
+
+async def transcribe_audio(audiofile, recorded_audio):
+    """
+
+    :param audiofile:
+    :param recorded_audio:
+    :return:  audio_file1
+    """
+    # Write the audio file
+    async with aiofiles.open(audiofile, 'wb') as f:
+        await f.write(recorded_audio)
+    #Read the audio file
+    audio_file1 = open(audiofile, "rb")
+    return audio_file1
+

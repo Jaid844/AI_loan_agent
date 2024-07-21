@@ -16,7 +16,7 @@ class audio_node:
         # OpenAI API endpoint and parameters
         url = "https://api.openai.com/v1/audio/speech"
         headers = {
-            "Authorization": 'Bearer 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',  # Replace with your API key
+            "Authorization": 'Bearer sk-proj-hnhWV1fWqCslyFTx27kRT3BlbkFJseRG57mg04P5ANCkAQd9',  # Replace with your API key
         }
 
         data = {

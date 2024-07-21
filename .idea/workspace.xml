@@ -6,34 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="64583063-63fb-478e-8f6e-c03751244612" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Untitled.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Untitled.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/.env" beforeDir="false" afterPath="$PROJECT_DIR$/src/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/src/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/Loan_amount.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/Loan_amount.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/audio.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/audio.wav" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.wav" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/faiss_index_loan_voyage1/index.faiss" beforeDir="false" afterPath="$PROJECT_DIR$/src/faiss_index_loan_voyage1/index.faiss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/faiss_index_loan_voyage1/index.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/src/faiss_index_loan_voyage1/index.pkl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/graph.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/history_of_conversation.db" beforeDir="false" afterPath="$PROJECT_DIR$/src/history_of_conversation.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/main_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main_2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/myrecording.wav" beforeDir="false" afterPath="$PROJECT_DIR$/src/myrecording.wav" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/data_level0.bin" beforeDir="false" afterPath="$PROJECT_DIR$/src/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/data_level0.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/header.bin" beforeDir="false" afterPath="$PROJECT_DIR$/src/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/header.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/length.bin" beforeDir="false" afterPath="$PROJECT_DIR$/src/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/length.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/link_lists.bin" beforeDir="false" afterPath="$PROJECT_DIR$/src/new_conv_db_new/2ded948b-e018-4595-ba2f-3731dbfa69e2/link_lists.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/new_conv_db_new/chroma.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/src/new_conv_db_new/chroma.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/new_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/new_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nodes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/rough.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/rough.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/state.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/streamlit_audio.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/streamlit_audio.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/test_case.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/test_case.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/testingagents.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/testingagents.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_agent/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tools.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rough.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/rough.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/testing.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/testing.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/.env" beforeDir="false" afterPath="$PROJECT_DIR$/src/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/audio.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/audio.wav" beforeDir="false" afterPath="$PROJECT_DIR$/src/audio.wav" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main_2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nodes.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/nodes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/tools.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -77,7 +55,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.rough">
+  <component name="RunManager" selected="Python.main">
     <configuration name="audio" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="loan_work" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -309,7 +287,7 @@
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$USER_HOME$/.conda/envs/UI_langchain_bot/Lib/site-packages/langgraph/prebuilt/tool_node.py</url>
-          <line>55</line>
+          <line>56</line>
           <option name="timeStamp" value="24" />
         </line-breakpoint>
       </breakpoints>
